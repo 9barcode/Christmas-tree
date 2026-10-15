@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>겨울 실내 배경 모션</title>
+<link rel="stylesheet" href="../assets/backgrounds/cozy-room.css">
+<style>body{margin:0;background:#332319;color:#fff3db;font:16px system-ui}main{max-width:480px;margin:auto}header{padding:12px;display:flex;align-items:center;justify-content:space-between}button{font:inherit;padding:8px 12px}svg[hidden]{display:none}</style></head>
+<body><main><header><span>배경 · 불꽃 · 창밖 눈</span><button id="toggle" type="button" aria-pressed="true">트리 숨기기</button></header>
+<div class="cozy-room" aria-label="왼쪽 벽난로의 은은한 불꽃과 오른쪽 창밖에 천천히 내리는 눈">
+<img class="cozy-room__base" src="../assets/backgrounds/cozy-europe-room.png" alt="양말이 걸린 벽난로와 눈 덮인 마을이 보이는 유럽풍 실내">
+<canvas class="cozy-room__snow" aria-hidden="true"></canvas>
+<img class="cozy-room__fire" src="../assets/effects/fire-glow.png" alt="">
+<svg class="cozy-room__pot" viewBox="380 840 495 340" aria-hidden="true"><image href="../assets/planters/planter-ribbon.png"/></svg>
+<svg class="cozy-room__tree" viewBox="36 24 1180 1160" aria-hidden="true"><image href="../assets/trees/tree-green.png"/></svg>
+</div></main><script type="module">
+import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
+const stop=startCozySnow(document.querySelector('canvas'));
+document.querySelector('#toggle').addEventListener('click',e=>{const show=e.target.getAttribute('aria-pressed')!=='true';e.target.setAttribute('aria-pressed',String(show));e.target.textContent=show?'트리 숨기기':'트리 보기';document.querySelectorAll('.cozy-room__tree,.cozy-room__pot').forEach(n=>n.toggleAttribute('hidden',!show))});
+window.addEventListener('pagehide',stop,{once:true});
+</script></body></html>
