@@ -1,0 +1,7 @@
+{
+  "id": "rocking-horse",
+  "path": "assets/ornaments/rocking-horse.png",
+  "prompt": "Use case: background-extraction / precise-object-edit. Extract ONLY original numbered item 14 from the attached approved 23-ornament concept sheet: miniature honey wooden rocking horse with red rocker and tiny green saddle. Do not include the printed number. Item 7 has been removed from collection; no ivory bow variant.  Preserve the approved object's shape and the collection's layered small overlapping painted brushstrokes/color planes, rounded large-volume shading, warm left firelight and restrained highlights. Not photoreal, not smooth plastic 3D, not flat vector. ONE full isolated object centered at readable large size with clear margin. TRUE transparent alpha background, absolutely NO solid backdrop, no floor, no ground shadow, no color fog or aura outside object. No text, no number, no UI, no other objects. Keep a clearly visible small top hanging attachment loop suitable as rotation pivot. Clean silhouette and no dangling long string.",
+  "kind": "ornament",
+  "originalNumber": 14
+}
