@@ -1,0 +1,7 @@
+{
+  "id": "teddy-bear",
+  "path": "assets/decorations/teddy-bear.png",
+  "prompt": "Use case: background-extraction. Extract this EXACT approved seated honey-brown teddy bear with red knitted scarf, preserving sweet face, proportions, paws, visible layered painted brushwork. Remove cream background and entire ground shadow; true clean alpha transparency immediately outside plush contour. One full bear centered with modest clear margin. NO extra props, no aura, no backdrop, no text, no redesign.",
+  "kind": "floor",
+  "originalNumber": null
+}
