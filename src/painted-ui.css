@@ -15,3 +15,5 @@ dialog h2:before,dialog h2:after{background-image:url('../assets/ui/painted/holl
 button:not(:disabled):active{filter:brightness(.94)}
 @media(max-width:360px){.home footer .checkin{font-size:4.8cqw}.home footer .checkin.gift-cta{font-size:3.3cqw}}
 .slot.selected{background:none;border:6px solid transparent;border-image:url('../assets/ui/painted/button-cream.webp') 85 105 fill / 8px / 0 stretch;outline:1px solid #ebc374;outline-offset:2px}
+
+.stamp-mark > .completion-star{width:42px;height:42px;object-fit:contain}
