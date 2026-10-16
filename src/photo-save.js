@@ -8,6 +8,6 @@ export async function preparePhoto(blob,{native=!!globalThis.window?.ReactNative
 
 export async function savePhoto(photo,{nav=globalThis.navigator,doc=globalThis.document,urls=globalThis.URL}={}){
  if(photo.native){await photo.save();return 'native';}
- if(nav?.share&&nav.canShare?.({files:[photo.file]})){await nav.share({files:[photo.file],title:'나의 크리스마스 트리'});return 'share';}
+ if(nav?.share&&nav.canShare?.({files:[photo.file]})){await nav.share({files:[photo.file]});return 'share';}
  const url=urls.createObjectURL(photo.blob),a=doc.createElement('a');a.href=url;a.download='my-christmas-tree.png';doc.body.append(a);a.click();a.remove();setTimeout(()=>urls.revokeObjectURL(url),60000);return 'download';
 }

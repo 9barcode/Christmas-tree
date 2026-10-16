@@ -13,6 +13,6 @@ test('native failure propagates so the dialog can report it and allow retry',asy
 });
 test('browser uses file sharing with a prepared PNG and preserves cancellation',async()=>{
  const photo=await preparePhoto(new Blob(['png']),{native:false});let shared;
- assert.equal(await savePhoto(photo,{nav:{canShare:()=>true,share:async data=>{shared=data}},doc:null}),'share');assert.equal(shared.files[0].type,'image/png');
+ assert.equal(await savePhoto(photo,{nav:{canShare:()=>true,share:async data=>{shared=data}},doc:null}),'share');assert.equal(shared.files[0].type,'image/png');assert.deepEqual(Object.keys(shared),['files']);
  await assert.rejects(savePhoto(photo,{nav:{canShare:()=>true,share:async()=>{throw new DOMException('cancel','AbortError')}}}),{name:'AbortError'});
 });
