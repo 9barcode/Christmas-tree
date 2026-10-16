@@ -43,7 +43,7 @@ $('.checkin').onclick=async()=>{const target=state.trees[state.selected];if(busy
 const treeNames=['첫 번째','두 번째','세 번째','네 번째','다섯 번째'];
 function openModal(title,content){const container=$('.modal-content');container.replaceChildren();const h=document.createElement('h2');h.id='modal-title';h.textContent=title;container.append(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
 function showGuide(){if(busy||selectedDecoration)return;const content=document.createElement('div');content.className='guide-content';const cards=[
- ['assets/ornaments/bell-brass.png','광고 보고 하루 한 번 출석','매일 장식을 하나씩 달아요. 하루 쉬면 꾸미기를 마무리하고, 광고 보고 모은 선물을 받아요.'],
+ ['assets/ornaments/bell-brass.png','광고 보고 하루 한 번 출석','매일 출석해 트리를 꾸며요. 결석하면 꾸미기가 끝나고, 모은 선물을 받아요.'],
  ['assets/ornaments/reindeer.png','출석하면 루돌프 도장 꾹!','보상 내역에서 선택한 트리의 출석표를 확인해요.'],
  ['assets/trees/tree-green.png','첫 출석으로 다음 트리를 열어요','같은 날에도 차례로 출석하면 최대 5개를 키울 수 있어요.'],
  ['assets/decorations/gift-burgundy.png','원하는 곳을 터치해 꾸며요','선물·미니카·인형은 바닥에, 오너먼트는 트리 안에 놓아요. 이미 놓은 장식도 다시 옮길 수 있어요.'],
