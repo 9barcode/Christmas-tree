@@ -5,7 +5,8 @@ const $=s=>document.querySelector(s),KEY='christmas-tree.frontend.v1';
 const preview=new URLSearchParams(location.search).get('preview')==='1';
 let state;try{state=validateState(JSON.parse(localStorage.getItem(KEY)))}catch{state=initialState()}
 if(preview)state=initialState();
-const manifest=await fetch('assets/decoration-manifest.json').then(r=>{if(!r.ok)throw Error('에셋 정보를 불러오지 못했어요');return r.json()}).catch(e=>{showToast(e.message);return {assets:[]}});
+const manifest=await fetch('assets/decoration-manifest.json').then(r=>{if(!r.ok)throw Error('에셋 정보를 불러오지 못했어요');return r.json()});
+if(!Array.isArray(manifest.assets)||manifest.assets.length!==30)throw new Error('장식 정보를 확인하지 못했어요.');
 const assets=manifest.assets,sequence=[...assets.filter(a=>a.kind==='floor'),...assets.filter(a=>a.kind==='ornament').sort((a,b)=>a.originalNumber-b.originalNumber),...assets.filter(a=>a.kind==='lights'),...assets.filter(a=>a.kind==='topper')];
 for(const t of state.trees)t.positions=sanitizePositions(t.positions,sequence,t.count);
 let selectedDecoration=null;
