@@ -2,8 +2,9 @@
 export const OBJECT_SIZES={tree:{w:74.8,h:47.3},pot:{w:26,h:11.9},floor:{w:14,h:9},ornament:{w:7,h:6},lights:{w:72.6,h:46.2},topper:{w:13.2,h:6.6}};
 export const FLOOR_SIZE=OBJECT_SIZES.floor,ORNAMENT_SIZE=OBJECT_SIZES.ornament;
 export const ROOM_BOUNDS={left:1,right:99,top:22,bottom:77.5};
+export const FLOOR_BOUNDS={...ROOM_BOUNDS,bottom:90};
 export const BASE_OBJECTS=[{id:'__pot',kind:'pot'}];
-export function clampPosition(kind,x,y,hasTopper=false){const s=OBJECT_SIZES[kind];if(!s||!Number.isFinite(x)||!Number.isFinite(y))return null;return {x:Math.max(ROOM_BOUNDS.left+s.w/2,Math.min(ROOM_BOUNDS.right-s.w/2,x)),y:Math.max(ROOM_BOUNDS.top+(kind==='tree'&&hasTopper?23.5:s.h/2),Math.min(ROOM_BOUNDS.bottom-s.h/2,y))};}
+export function clampPosition(kind,x,y,hasTopper=false){const s=OBJECT_SIZES[kind];if(!s||!Number.isFinite(x)||!Number.isFinite(y))return null;const area=kind==='floor'?FLOOR_BOUNDS:ROOM_BOUNDS;return {x:Math.max(area.left+s.w/2,Math.min(area.right-s.w/2,x)),y:Math.max(area.top+(kind==='tree'&&hasTopper?23.5:s.h/2),Math.min(area.bottom-s.h/2,y))};}
 export function canPlace(kind,x,y){const p=clampPosition(kind,x,y);return !!p&&Math.abs(p.x-x)<1e-8&&Math.abs(p.y-y)<1e-8;}
 export function sanitizePositions(positions,assets,count){const clean={};if(!positions||typeof positions!=='object')return clean;for(const a of [...BASE_OBJECTS,...assets.slice(0,count).filter(a=>!['tree','lights','topper'].includes(a.kind))]){const p=positions[a.id],bounded=p&&clampPosition(a.kind,p.x,p.y,count===30);if(bounded)clean[a.id]=bounded;}return clean;}
 export function placeDecoration(tree,assets,id,x,y){const a=[...BASE_OBJECTS,...assets.slice(0,tree.count)].find(a=>a.id===id);if(!a||['tree','lights','topper'].includes(a.kind)||!canPlace(a.kind,x,y))return false;tree.positions??={};tree.positions[id]={x,y};return true;}
