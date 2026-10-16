@@ -5,3 +5,5 @@
 .garden .movable{animation:none}
 
 .checkin.gift-cta{font-size:3cqw;line-height:1.4;padding:2.4cqw .5cqw}.attendance.gift-note{font-size:2.15cqw;padding:.8cqw 1.4cqw;max-width:100%;white-space:normal}
+
+.slot{position:relative}.restart-badge{position:absolute;right:-.8cqw;top:-.8cqw;border:1px solid #b48536;border-radius:50%;width:3.8cqw;height:3.8cqw;display:grid;place-items:center;background:#ffedbc;color:#71462b;font-size:3cqw;line-height:1}.slot-menu{position:absolute;top:calc(100% + 8px);width:170px;padding:9px;z-index:50;background:#fff2d9;border:1px solid #d0aa74;border-radius:15px;box-shadow:0 5px 18px #3b211966}.slot-menu:before{content:'';position:absolute;top:-7px;left:20px;width:12px;height:12px;background:#fff2d9;transform:rotate(45deg);border-left:1px solid #d0aa74;border-top:1px solid #d0aa74}.slot-menu button{position:relative;width:100%;border:0;border-radius:10px;background:#f4e5c9;color:#74432c;padding:12px 5px;font-size:16px}.missions[hidden],.decorate-link[hidden]{display:none}
