@@ -1,9 +1,10 @@
-// Coordinates are percentages of the 2:3 home canvas, independent of screen size.
-export const FLOOR_SIZE={w:14,h:9},ORNAMENT_SIZE={w:7,h:6};
-const TREE=[[50,26],[56,34],[63,42],[72,52],[82,65],[18,65],[28,52],[37,42],[44,34]];
-function inPolygon(x,y,polygon){let inside=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if(((a[1]>y)!==(b[1]>y))&&(x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]))inside=!inside}return inside;}
-export function canPlace(kind,x,y){if(!Number.isFinite(x)||!Number.isFinite(y))return false;const size=kind==='floor'?FLOOR_SIZE:ORNAMENT_SIZE;const left=x-size.w/2,right=x+size.w/2,top=y-size.h/2,bottom=y+size.h/2;if(kind==='floor'){return left>=10&&right<=90&&top>=64&&bottom<=77&&!(right>37&&left<63&&bottom>65&&top<76.9)}if(kind!=='ornament')return false;return [[left,top],[right,top],[left,bottom],[right,bottom]].every(([px,py])=>inPolygon(px,py,TREE));}
-export function sanitizePositions(positions,assets,count){const clean={};if(!positions||typeof positions!=='object')return clean;for(const a of assets.slice(0,count)){const p=positions[a.id];if(p&&canPlace(a.kind,p.x,p.y))clean[a.id]={x:p.x,y:p.y}}return clean;}
-export function placeDecoration(tree,assets,id,x,y){const a=assets.slice(0,tree.count).find(a=>a.id===id);if(!a||!canPlace(a.kind,x,y))return false;tree.positions??={};tree.positions[id]={x,y};return true;}
-export function defaultPosition(kind,index){if(kind==='floor')return [{x:23,y:69},{x:30,y:72},{x:70,y:70},{x:81,y:72},{x:18,y:72},{x:76,y:69}][index];const points=[];for(const y of [38,44,50,56,62])for(const x of [26,34,42,50,58,66,74])if(canPlace('ornament',x,y))points.push({x,y});return points[index%points.length];}
-export const TREE_OUTLINE=TREE.map(p=>p.join(',')).join(' ');
+// Object centers and sizes use percentages of the fixed room scene, independent of viewport.
+export const OBJECT_SIZES={tree:{w:68,h:43},pot:{w:26,h:11.9},floor:{w:14,h:9},ornament:{w:7,h:6},lights:{w:66,h:42},topper:{w:12,h:6}};
+export const FLOOR_SIZE=OBJECT_SIZES.floor,ORNAMENT_SIZE=OBJECT_SIZES.ornament;
+export const ROOM_BOUNDS={left:1,right:99,top:22,bottom:77.5};
+export const BASE_OBJECTS=[{id:'__tree',kind:'tree'},{id:'__pot',kind:'pot'}];
+export function clampPosition(kind,x,y,hasTopper=false){const s=OBJECT_SIZES[kind];if(!s||!Number.isFinite(x)||!Number.isFinite(y))return null;return {x:Math.max(ROOM_BOUNDS.left+s.w/2,Math.min(ROOM_BOUNDS.right-s.w/2,x)),y:Math.max(ROOM_BOUNDS.top+(kind==='tree'&&hasTopper?23.5:s.h/2),Math.min(ROOM_BOUNDS.bottom-s.h/2,y))};}
+export function canPlace(kind,x,y){const p=clampPosition(kind,x,y);return !!p&&Math.abs(p.x-x)<1e-8&&Math.abs(p.y-y)<1e-8;}
+export function sanitizePositions(positions,assets,count){const clean={};if(!positions||typeof positions!=='object')return clean;for(const a of [...BASE_OBJECTS,...assets.slice(0,count).filter(a=>!['lights','topper'].includes(a.kind))]){const p=positions[a.id],bounded=p&&clampPosition(a.kind,p.x,p.y,count===30);if(bounded)clean[a.id]=bounded;}return clean;}
+export function placeDecoration(tree,assets,id,x,y){const a=[...BASE_OBJECTS,...assets.slice(0,tree.count)].find(a=>a.id===id);if(!a||['lights','topper'].includes(a.kind)||!canPlace(a.kind,x,y))return false;tree.positions??={};tree.positions[id]={x,y};return true;}
+export function defaultPosition(kind,index=0){if(kind==='tree')return {x:50,y:45.5};if(kind==='pot')return {x:50,y:70.95};if(kind==='lights')return {x:50,y:46};if(kind==='topper')return {x:50,y:25};if(kind==='floor')return [{x:23,y:69},{x:30,y:72},{x:70,y:70},{x:81,y:72},{x:18,y:72},{x:76,y:69}][index%6];if(kind==='ornament'){const points=[];for(const [y,xs] of [[38,[46,54]],[44,[38,46,54,62]],[50,[34,42,50,58,66]],[56,[30,38,46,54,62,70]],[62,[26,34,42,50,58]]])for(const x of xs)points.push({x,y});return points[index%points.length]};return null;}
