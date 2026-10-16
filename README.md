@@ -40,3 +40,11 @@
 
 ### 시작 로딩
 `src/bootstrap.js`가 홈 모듈과 실제 표시 이미지를 기다립니다. `src/loading-state.js`에 점 주기와 준비 대기/실패 판정을 분리했습니다. 로딩 배경과 달리기 3프레임은 `assets/loading/`에 있습니다. 서버 API를 연결할 때는 초기 데이터 요청도 준비 Promise에 포함하세요. 실기기에서 애니메이션 및 화면 전환의 시각 검증은 필요합니다.
+
+## 앱인토스 AIT 빌드
+
+GitHub **Actions → Build Release AIT → Run workflow**에서 실행합니다. `app_name`은 앱인토스 콘솔의 앱 이름과 동일하게 입력합니다(기본 `christmas-tree`). 완료 후 실행 화면의 Artifacts에서 AIT가 포함된 ZIP을 다운로드합니다. 보관 기간은 14일입니다.
+
+포도키우기 기준으로 Node 24, `@apps-in-toss/web-framework` 3.7.0, `npm ci`를 사용합니다. 로컬에서는 `npm ci` 후 `npm run build:toss`를 실행합니다. HTML·ES 모듈·이미지를 `dist/toss`에 복사하고 `ait build`로 패키징합니다. 서버/DB 배포나 프로모션 시크릿 변경은 포함하지 않습니다.
+
+현재 임시 날짜 테스트 버튼도 패키지에 포함됩니다. 광고 및 지급 연동 전 프론트엔드 검증용이며, 출시 전 임시 테스트 진입점을 제거해야 합니다.
