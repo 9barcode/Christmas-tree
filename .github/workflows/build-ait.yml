@@ -6,7 +6,7 @@ on:
       app_name:
         description: '앱인토스 콘솔에 등록한 앱 이름(appName)'
         required: true
-        default: christmas-tree
+        default: christmas-tree-decorating
         type: string
 
 permissions:
