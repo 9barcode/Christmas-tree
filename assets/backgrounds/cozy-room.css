@@ -1,10 +1,8 @@
 .cozy-room{position:relative;isolation:isolate;aspect-ratio:2/3;overflow:hidden;background:#7d4724;width:100%}
 .cozy-room__base,.cozy-room__snow{position:absolute;inset:0;width:100%;height:100%}
 .cozy-room__snow{pointer-events:none;z-index:1}
-.cozy-room__fire{position:absolute;left:-1.2%;top:55.5%;width:16.5%;height:7%;object-fit:contain;transform-origin:50% 100%;animation:cozy-fire 2.7s ease-in-out infinite alternate;z-index:2;pointer-events:none}
+.cozy-room__fire{position:absolute;left:0;top:50.78125%;width:16.9921875%;height:13.0208333%;z-index:2;pointer-events:none}
 .cozy-room__tree{position:absolute;left:19%;top:28%;width:62%;height:50%;object-fit:fill;z-index:4;pointer-events:none}
 .cozy-room__pot{position:absolute;left:39.5%;top:72%;width:21%;height:12%;object-fit:contain;z-index:3;pointer-events:none}
 /* PNGs have different transparent padding: clip to their opaque content via a viewBox wrapper. */
 .cozy-room__tree image,.cozy-room__pot image{width:1254px;height:1254px}
-@keyframes cozy-fire{0%{opacity:.5;transform:scale(.96,.92)}35%{opacity:.67;transform:scale(1.02,1.03)}70%{opacity:.56;transform:scale(.99,.97)}100%{opacity:.72;transform:scale(.97,1.06)}}
-@media(prefers-reduced-motion:reduce){.cozy-room__fire{animation:none;opacity:.6}}
