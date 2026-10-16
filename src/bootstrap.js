@@ -10,6 +10,13 @@ function stop(){clearInterval(timer);splash.classList.add('is-stopped')}
 retry.addEventListener('click',()=>location.reload());
 async function decodeImage(img){if(img.decode)await img.decode();else if(!img.complete)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject});if(!img.naturalWidth)throw new Error(`이미지 준비 실패: ${img.getAttribute('src')}`);}
 try {
+  if (new URLSearchParams(location.search).get('preview') !== '1') {
+    stage='토스 로그인 및 트리 데이터';
+    const runtime=await import('./treemoa-runtime.js');
+    const initialized=await runtime.initializeTreemoa();
+    window.treemoaApi=initialized.api;
+    window.treemoaInitialState=initialized.state;
+  }
   await waitForHomeReady([
     // Module resolves only after state restore, manifest validation, current tree and earned decorations render.
     ()=>import('./home.js'),
