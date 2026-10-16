@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {canPlace,placeDecoration,sanitizePositions,defaultPosition,clampPosition,ROOM_BOUNDS,FLOOR_BOUNDS,POT_BOUNDS,OBJECT_SIZES} from '../src/placement.js';
+import {canPlace,placeDecoration,sanitizePositions,defaultPosition,clampPosition,ROOM_BOUNDS,FLOOR_BOUNDS,POT_BOUNDS,OBJECT_SIZES,floorDepth} from '../src/placement.js';
 const assets=[{id:'gift',kind:'floor'},{id:'ball',kind:'ornament'},{id:'star',kind:'topper'},{id:'lights',kind:'lights'}];
 test('floor objects and ornaments may overlap anywhere inside the room area',()=>{for(const kind of ['floor','ornament']){assert.ok(canPlace(kind,50,45));assert.ok(canPlace(kind,20,60));assert.ok(canPlace(kind,50,70));assert.equal(canPlace(kind,NaN,40),false)}});
 test('all draggable objects clamp their entire footprint within room boundaries',()=>{for(const kind of ['tree','pot','floor','ornament'])for(const [x,y] of [[-100,-100],[200,200],[50,45]]){const p=clampPosition(kind,x,y),s=OBJECT_SIZES[kind];assert.ok(p.x-s.w/2>=ROOM_BOUNDS.left);assert.ok(p.x+s.w/2<=ROOM_BOUNDS.right);assert.ok(p.y-s.h/2>=ROOM_BOUNDS.top);assert.ok(p.y+s.h/2<=(kind==='floor'?FLOOR_BOUNDS:kind==='pot'?POT_BOUNDS:ROOM_BOUNDS).bottom+1e-8)}});
@@ -8,3 +8,5 @@ test('saved positions are preserved per tree, invalid values excluded, old fixed
 test('default positions remain valid and completed tree leaves space for attached star',()=>{for(const kind of ['floor','ornament'])for(let i=0;i<(kind==='floor'?6:22);i++){const p=defaultPosition(kind,i);assert.ok(canPlace(kind,p.x,p.y))}assert.equal(clampPosition('tree',50,0,true).y,45.5);assert.equal(clampPosition('tree',50,0,false).y,ROOM_BOUNDS.top+OBJECT_SIZES.tree.h/2)});
 
 test('floor gifts reach the cleared rug while pot and ornaments retain their bounds',()=>{assert.ok(canPlace('floor',50,85.5));assert.equal(canPlace('floor',50,86),false);assert.equal(canPlace('pot',50,85.5),false);assert.equal(canPlace('ornament',50,85.5),false);assert.deepEqual(sanitizePositions({gift:{x:50,y:85.5}},assets,1),{gift:{x:50,y:85.5}})});
+
+test('floor objects sort by ground contact instead of asset unlock order',()=>{assert.ok(floorDepth('floor',70)<floorDepth('floor',74));assert.ok(floorDepth('floor',70)<floorDepth('pot',73.95));assert.ok(floorDepth('floor',80)>floorDepth('pot',73.95));assert.equal(floorDepth('floor',73.95+(11.9-9)/2),floorDepth('pot',73.95));assert.equal(floorDepth('ornament',50),null)});

@@ -27,3 +27,6 @@ button:not(:disabled):active{filter:brightness(.94)}
 /* Leave the rug free for gifts, the toy car and the bear. */
 .home footer{top:137cqw;bottom:auto}
 .home > .home-links{top:154cqw}
+
+/* Keep depth-sorted scenery below the header and action buttons. */
+.home .garden{z-index:1}

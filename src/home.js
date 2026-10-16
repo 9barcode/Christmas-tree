@@ -4,7 +4,7 @@ import manifest from './decoration-manifest.js';
 import {nextTestDate} from './test-clock.js';
 import {isPaid,canShare,restartTree} from './tree-actions.js';
 import {settlementFor,rewardKey,ctaText,settleWithServer,confirmedRecord,canContinue} from './settlement.js';
-import {sanitizePositions,placeDecoration,defaultPosition,clampPosition,OBJECT_SIZES} from './placement.js';
+import {sanitizePositions,placeDecoration,defaultPosition,clampPosition,OBJECT_SIZES,floorDepth} from './placement.js';
 import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
 import {COLORS,initialState,validateState,localDate,attend} from './state.js';
 const $=s=>document.querySelector(s),KEY='christmas-tree.frontend.v1';
@@ -46,7 +46,7 @@ function bindFixed(node,kind,tree){const p=defaultPosition(kind),size=OBJECT_SIZ
 function bindObject(node,kind,id,tree,position,back=null){
  const size=OBJECT_SIZES[kind];let current=clampPosition(kind,position.x,position.y,tree.count===30);node.classList.add('draggable');node.dataset.id=id;node.style.width=`${size.w}%`;node.style.height=`${size.h}%`;
  const editable=()=>!settlementFor(tree,today());node.setAttribute('aria-label',({tree:'트리',pot:'화분',floor:'바닥 장식',ornament:'오너먼트',topper:'별',lights:'전구 줄'})[kind]+' 위치 옮기기');node.setAttribute('role','button');node.tabIndex=editable()?0:-1;
- function paint(){if(back){back.style.width=node.style.width;back.style.height=node.style.height;back.style.left=`${current.x}%`;back.style.top=`${current.y}%`;}node.style.left=`${current.x}%`;node.style.top=`${current.y}%`;if(kind==='tree')for(const fixedKind of ['topper','lights']){const fixed=$('.ornament.'+fixedKind);if(fixed){const p=fixedPosition(fixedKind,current);fixed.style.left=`${p.x}%`;fixed.style.top=`${p.y}%`;}}}
+ function paint(){const depth=floorDepth(kind,current.y);if(depth!==null)node.style.zIndex=String(depth);if(back){back.style.width=node.style.width;back.style.height=node.style.height;back.style.left=`${current.x}%`;back.style.top=`${current.y}%`;}node.style.left=`${current.x}%`;node.style.top=`${current.y}%`;if(kind==='tree')for(const fixedKind of ['topper','lights']){const fixed=$('.ornament.'+fixedKind);if(fixed){const p=fixedPosition(fixedKind,current);fixed.style.left=`${p.x}%`;fixed.style.top=`${p.y}%`;}}}
  paint();let drag=null;
  node.onpointerdown=e=>{if(busy||!editable()||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();e.stopPropagation();const r=$('.garden').getBoundingClientRect();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,start:{...current},rect:r};node.setPointerCapture(e.pointerId);node.classList.add('is-dragging');$('.home').classList.add('dragging');setBusy(true);};
  node.onpointermove=e=>{if(!drag||e.pointerId!==drag.pointer)return;e.preventDefault();current=clampPosition(kind,drag.start.x+(e.clientX-drag.x)/drag.rect.width*100,drag.start.y+(e.clientY-drag.y)/drag.rect.height*100,tree.count===30);paint();};
