@@ -3,7 +3,7 @@
   "name": "treemoa",
   "main": "worker/index.js",
   "compatibility_date": "2026-10-16",
-  "workers_dev": true,
+  "workers_dev": true,\n  "mtls_certificates": [\n    { "binding": "TOSS_MTLS", "certificate_id": "01f9a44c-aa13-4296-a12c-abd239616c81" }\n  ],
   "d1_databases": [
     {
       "binding": "DB",
