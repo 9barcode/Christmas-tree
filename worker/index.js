@@ -197,6 +197,27 @@ export default {
     try { user = await currentUser(request, env); }
     catch { return error(request, env, 'database_unavailable', 503); }
     if (!user) return error(request, env, 'unauthorized', 401);
+    if (url.pathname === '/api/trees' && request.method === 'GET') {
+      try { return await getTrees(request,env,user); }
+      catch (cause) {
+        console.error('[treemoa.trees]',cause instanceof Error ? cause.name : 'unknown');
+        return error(request,env,'trees_unavailable',503);
+      }
+    }
+    if (url.pathname === '/api/trees' && request.method === 'POST') {
+      try { return await createTree(request,env,user); }
+      catch (cause) {
+        console.error('[treemoa.trees.create]',cause instanceof Error ? cause.name : 'unknown');
+        return error(request,env,'tree_create_failed',503);
+      }
+    }
+    if (url.pathname === '/api/trees/positions' && request.method === 'POST') {
+      try { return await saveTreePositions(request,env,user); }
+      catch (cause) {
+        console.error('[treemoa.trees.positions]',cause instanceof Error ? cause.name : 'unknown');
+        return error(request,env,'tree_save_failed',503);
+      }
+    }
     if (url.pathname === '/api/promotions' && request.method === 'GET') {
       try { return await promotions(request, env, user); }
       catch (cause) {
