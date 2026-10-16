@@ -279,6 +279,13 @@ export default {
         return error(request,env,'tree_create_failed',503);
       }
     }
+    if (url.pathname === '/api/trees/attendance' && request.method === 'POST') {
+      try { return await attendTree(request,env,user); }
+      catch (cause) {
+        console.error('[treemoa.attendance]',cause instanceof Error ? cause.name : 'unknown');
+        return error(request,env,'attendance_unavailable',503);
+      }
+    }
     if (url.pathname === '/api/trees/positions' && request.method === 'POST') {
       try { return await saveTreePositions(request,env,user); }
       catch (cause) {
