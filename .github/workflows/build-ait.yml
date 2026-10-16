@@ -8,6 +8,11 @@ on:
         required: true
         default: christmas-tree-decorating
         type: string
+      rewarded_ad_group_id:
+        description: '트리모아 앱의 보상형 광고 그룹 ID'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -30,6 +35,7 @@ jobs:
         env:
           NODE_ENV: production
           TOSS_APP_NAME: ${{ inputs.app_name }}
+          REWARDED_AD_GROUP_ID: ${{ inputs.rewarded_ad_group_id }}
       - uses: actions/upload-artifact@v4
         with:
           name: christmas-tree-release-ait-${{ github.sha }}
