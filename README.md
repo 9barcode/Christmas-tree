@@ -48,3 +48,7 @@ GitHub **Actions → Build Release AIT → Run workflow**에서 실행합니다.
 포도키우기 기준으로 Node 24, `@apps-in-toss/web-framework` 3.7.0, `npm ci`를 사용합니다. 로컬에서는 `npm ci` 후 `npm run build:toss`를 실행합니다. HTML·ES 모듈·이미지를 `dist/toss`에 복사하고 `ait build`로 패키징합니다. 서버/DB 배포나 프로모션 시크릿 변경은 포함하지 않습니다.
 
 현재 임시 날짜 테스트 버튼도 패키지에 포함됩니다. 광고 및 지급 연동 전 프론트엔드 검증용이며, 출시 전 임시 테스트 진입점을 제거해야 합니다.
+
+## 트리모아 서버 / DB
+
+`treemoa` Cloudflare Worker가 기존 `podomoa-db`에 연결합니다. 모든 앱 테이블은 `treemoa_`, 마이그레이션 이력도 `treemoa_d1_migrations`로 분리합니다. [테이블 구성과 배포 방법](docs/worker-database.md)을 참고하세요. 현재 서버 범위는 DB 구성과 연결 확인 API이며, 홈의 실제 DB 저장·인증·광고·지급 연동은 아직 포함하지 않습니다.
