@@ -1,5 +1,5 @@
 import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
-import {preparePhoto,savePhoto} from './photo-save.js';
+import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
 import manifest from './decoration-manifest.js';
 import {nextTestDate} from './test-clock.js';
 import {isPaid,canShare,restartTree} from './tree-actions.js';
@@ -97,8 +97,8 @@ function showShare(){
  if(!canShare(state.trees[state.selected],state.selected))return;
  const content=document.createElement('div'),note=document.createElement('p');note.textContent='트리 사진을 준비하고 있어요.';content.append(note);
  let picture=null;const index=state.selected,source=state.trees[index];
- const run=async(button)=>{if(busy||!picture)return;button.disabled=true;setBusy(true);note.textContent='열린 메뉴에서 이미지 저장 또는 보낼 앱을 선택해 주세요.';try{const result=await savePhoto(picture);note.textContent=result==='download'?'다운로드 내역에서 트리 사진을 확인해 주세요.':'사진을 앨범에 넣으려면 메뉴에서 이미지 저장을 선택해 주세요.';}catch(error){note.textContent=error.name==='AbortError'?'저장을 취소했어요. 다시 눌러 저장할 수 있어요.':'사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{button.disabled=false;setBusy(false)}};
- const save=actionButton('사진으로 저장하기',()=>run(save)),share=actionButton('친구에게 보내기',()=>run(share));save.disabled=share.disabled=true;content.append(save,share);openModal('내 트리 자랑하기',content);
+ const run=async(button,withGreeting=false)=>{if(busy||!picture)return;button.disabled=true;setBusy(true);note.textContent='열린 메뉴에서 이미지 저장 또는 보낼 앱을 선택해 주세요.';try{const result=await (withGreeting?sharePhoto(picture):savePhoto(picture));note.textContent=withGreeting?'트리 사진과 크리스마스 인사말을 함께 공유해요.':result==='download'?'다운로드 내역에서 트리 사진을 확인해 주세요.':'사진을 앨범에 넣으려면 메뉴에서 이미지 저장을 선택해 주세요.';}catch(error){note.textContent=error.name==='AbortError'?'취소했어요. 다시 눌러 주세요.':withGreeting?(error.message||'사진을 공유하지 못했어요. 다시 눌러 주세요.'):'사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{button.disabled=false;setBusy(false)}};
+ const save=actionButton('사진으로 저장하기',()=>run(save)),share=actionButton('친구에게 보내기',()=>run(share,true));save.disabled=share.disabled=true;content.append(save,share);openModal('내 트리 자랑하기',content);
  // Prepare before the tap so native sharing retains the user's activation on mobile.
  treePicture().then(preparePhoto).then(photo=>{if(state.selected!==index||state.trees[index]!==source||!content.isConnected)return;picture=photo;note.textContent='정성껏 꾸민 트리를 사진으로 간직해요.';save.disabled=share.disabled=false;}).catch(()=>{note.textContent='사진을 준비하지 못했어요. 창을 닫고 다시 눌러 주세요.';});
 }
