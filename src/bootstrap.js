@@ -19,7 +19,7 @@ try {
   // Wait for a paint opportunity, not an invented minimum loading duration.
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   stop();home.inert=false;home.removeAttribute('aria-hidden');
-  document.body.classList.remove('is-loading');splash.remove();
+  document.body.classList.remove('is-loading');splash.remove();window.dispatchEvent(new Event('tree:home-ready'));
 } catch(error) {
   stop();copy.textContent='화면을 준비하지 못했어요. 다시 시도해 주세요.';
   splash.setAttribute('aria-label','로딩 실패');retry.hidden=false;
