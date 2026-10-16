@@ -69,7 +69,7 @@ function openModal(title,content){const container=$('.modal-content');container.
 function showGuide(){if(busy)return;const content=document.createElement('div');content.className='guide-content';const cards=[
  ['assets/ornaments/bell-brass.png','광고 보고 하루 한 번 출석','매일 출석해 트리를 꾸며요. 결석하면 꾸미기가 끝나고, 모은 선물을 받아요.'],
  ['assets/ornaments/reindeer.png','출석하면 루돌프 도장 꾹!','보상 내역에서 선택한 트리의 출석표를 확인해요.'],
- ['assets/trees/tree-pink.png','첫 출석으로 다음 트리를 열어요','같은 날에도 차례로 출석하면 최대 5개를 키울 수 있어요.'],
+ ['assets/trees/tree-green.png','첫 출석으로 다음 트리를 열어요','같은 날에도 차례로 출석하면 최대 5개를 키울 수 있어요.'],
  ['assets/decorations/gift-burgundy.png','원하는 곳으로 옮겨 꾸며요','화분과 장식을 잡아서 원하는 곳으로 옮겨요. 트리와 별, 전구 줄은 고정이에요.'],
  ['assets/toppers/star-gold.png','30번째 출석에는 반짝이는 별','나만의 트리를 완성해요. 별과 전구 줄은 트리의 정해진 자리에 놓여요.']
  ];for(const [src,title,description] of cards){const card=document.createElement('article');card.className='guide-card';const img=document.createElement('img');img.src=src;img.alt='';const copy=document.createElement('div'),strong=document.createElement('strong'),p=document.createElement('p');strong.textContent=title;p.textContent=description;copy.append(strong,p);card.append(img,copy);content.append(card)}const confirm=document.createElement('button');confirm.className='modal-primary';confirm.textContent='알겠어요';confirm.onclick=()=>$('dialog').close();content.append(confirm);openModal('트리 꾸미기 이용안내',content);}
