@@ -2,7 +2,7 @@
 const requiredTables = [
   'treemoa_users', 'treemoa_sessions', 'treemoa_trees', 'treemoa_cycles',
   'treemoa_ad_completions', 'treemoa_attendance', 'treemoa_settlements',
-  'treemoa_promotion_api_calls',
+  'treemoa_promotion_api_calls', 'treemoa_missions', 'treemoa_promotion_payments',\n  'treemoa_promotion_rate_limits',
 ];
 export default {
   async fetch(request, env) {
