@@ -1,5 +1,6 @@
+import {canContinue} from './settlement.js';
 export const COLORS=['green','white','pink','blue','gold'];
 export function initialState(){return {version:1,selected:0,trees:[{color:'green',count:0,lastDate:null}]};}
 export function localDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function validateState(value){if(value?.version!==1||!Array.isArray(value.trees)||value.trees.length<1||value.trees.length>5)return initialState();if(value.trees.some((t,i)=>!COLORS.includes(t.color)||!Number.isInteger(t.count)||t.count<0||t.count>30||(i<value.trees.length-1&&t.count<1)||(t.lastDate!==null&&typeof t.lastDate!=='string'))||value.trees[0].color!=='green')return initialState();return {...value,selected:Number.isInteger(value.selected)&&value.selected>=0&&value.selected<value.trees.length?value.selected:0};}
-export function attend(state,date,color){const tree=state.trees[state.selected];if(tree.lastDate===date||tree.count>=30)return false;tree.count++;tree.lastDate=date;if(state.selected===state.trees.length-1&&state.trees.length<5)state.trees.push({color:COLORS.includes(color)?color:'green',count:0,lastDate:null});return true;}
+export function attend(state,date,color){const tree=state.trees[state.selected];if(!canContinue(tree,date))return false;tree.count++;tree.lastDate=date;if(state.selected===state.trees.length-1&&state.trees.length<5)state.trees.push({color:COLORS.includes(color)?color:'green',count:0,lastDate:null});return true;}
