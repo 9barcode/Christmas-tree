@@ -36,7 +36,7 @@ jobs:
       - name: Create only treemoa tables and migration history
         run: npm run db:migrate:remote
       - name: Deploy treemoa Worker
-        run: npm run worker:deploy > treemoa-deploy.log 2>&1 || { cat treemoa-deploy.log; exit 1; }
+        run: npm run worker:deploy -- --keep-vars > treemoa-deploy.log 2>&1 || { cat treemoa-deploy.log; exit 1; }
       - name: Verify D1 schema through Worker
         run: |
           node --input-type=module <<'JS'
