@@ -10,3 +10,12 @@ dialog{border:2px solid #d8b46e;border-radius:22px;padding:20px 16px;background:
 @media(max-width:360px){dialog{padding:18px 12px}.guide-card{gap:8px;padding:12px 0}.guide-card img{width:50px;height:60px}.guide-card strong{font-size:14px}.guide-card p{font-size:12px}.stamp-calendar{gap:4px}.stamp-day{font-size:10px}.rudolph-stamp{width:35px}.stamp-word{left:3px}.stamp-detail{font-size:9px}}
 /* Keep the final star below the progress label and aligned with the tree tip. */
 .ornament.topper{top:21.8%;height:6%;left:44%;width:12%}
+
+/* Keep the scene at its original size while reserving room below it for controls. */
+.home{aspect-ratio:2/3.3}
+.garden{top:0;left:0;right:0;bottom:auto;height:150cqw}
+.pot{left:37%;top:65%;width:26%;height:11.9%}
+.home > .home-links{top:117cqw}
+.home footer{top:127cqw;bottom:auto}
+/* Temporary tools start below the first viewport, available by scrolling. */
+.test-tools{margin-top:max(24px,calc(100svh - min(165vw,891px) + 24px));margin-bottom:24px}
