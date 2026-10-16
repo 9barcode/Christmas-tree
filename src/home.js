@@ -28,8 +28,9 @@ async function assetNode(path,className){const el=document.createElement('div');
 let renderId=0;
 async function render(){closeSlotMenu();const id=++renderId,t=state.trees[state.selected];$('.slots').replaceChildren(...Array.from({length:5},(_,i)=>{const b=document.createElement('button');b.className='slot'+(i===state.selected?' selected':'');b.setAttribute('aria-label',`${i+1}번 트리${state.trees[i]?'':' 잠김'}`);b.setAttribute('aria-pressed',String(i===state.selected));if(!state.trees[i])b.classList.add('is-locked');b.innerHTML=state.trees[i]?`<img src="assets/trees/tree-${state.trees[i].color}.png" alt=""><span>${i+1}</span>`:`<span class="lock" aria-hidden="true"><svg viewBox="0 0 32 36"><path d="M8 15V10a8 8 0 0 1 16 0v5" fill="none" stroke="currentColor" stroke-width="5"/><rect x="3" y="14" width="26" height="21" rx="4" fill="currentColor"/><path d="M16 21v7" stroke="#69452b" stroke-width="3"/></svg></span><span>${i+1}</span>`;if(isPaid(state.trees[i],i)){b.classList.add('can-restart');b.insertAdjacentHTML('beforeend','<span class="restart-badge" aria-hidden="true">↻</span>');if(i===state.selected){b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded',String(slotMenuIndex===i));b.setAttribute('aria-label',`${i+1}번 트리, 새 트리 꾸미기 메뉴`);}}b.onclick=()=>{if(busy)return;if(!state.trees[i])return showToast('앞 트리의 첫 출석을 완료하면 열려요');if(i===state.selected&&isPaid(state.trees[i],i)){toggleSlotMenu(i,b);return;}closeSlotMenu();state.selected=i;save();render()};return b}));$('.progress').textContent=`${['첫 번째','두 번째','세 번째','네 번째','다섯 번째'][state.selected]} 트리 · 장식 ${t.count}/30`;updateCTA();if(settlementFor(t,today())){$('.progress').textContent=`${treeNames[state.selected]} 트리 · 모은 장식 ${t.count}개`;}
 const tree=await assetNode(`assets/trees/tree-${t.color}.png`,'tree'),pot=await assetNode('assets/planters/planter-wood.png','pot');
-// Tree position is fixed.
-bindObject(pot,'pot','__pot',t,t.positions?.__pot??defaultPosition('pot'));
+// The rear rim sits behind the trunk; the front wall covers its base.
+const potBack=await assetNode('assets/planters/planter-wood.png','pot-back');
+bindObject(pot,'pot','__pot',t,t.positions?.__pot??defaultPosition('pot'),potBack);
 const ornaments=[],floor=[];let n=0,f=0;
 for(const a of sequence.slice(0,t.count)){
  const node=await assetNode(a.path,a.kind==='floor'?'floor-item':'ornament '+(a.kind==='topper'?'topper':a.kind==='lights'?'lights':''));
@@ -37,13 +38,13 @@ for(const a of sequence.slice(0,t.count)){
  if(['lights','topper'].includes(a.kind))bindFixed(node,a.kind,t);else bindObject(node,a.kind,a.id,t,t.positions?.[a.id]??defaultPosition(a.kind,index));
  if(a.kind==='floor')floor.push(node);else ornaments.push(node);
 }
-if(id!==renderId)return;$('.tree').replaceWith(tree);$('.pot').replaceWith(pot);$('.ornaments').replaceChildren(...ornaments);$('.floor').replaceChildren(...floor);}
+if(id!==renderId)return;$('.pot-back')?.remove();$('.garden').prepend(potBack);$('.tree').replaceWith(tree);$('.pot').replaceWith(pot);$('.ornaments').replaceChildren(...ornaments);$('.floor').replaceChildren(...floor);}
 function fixedPosition(kind,treePosition){const p=defaultPosition(kind),base=defaultPosition('tree');return {x:p.x+treePosition.x-base.x,y:p.y+treePosition.y-base.y};}
 function bindFixed(node,kind,tree){const p=defaultPosition(kind),size=OBJECT_SIZES[kind];node.classList.add('fixed-decoration');node.style.width=`${size.w}%`;node.style.height=`${size.h}%`;node.style.left=`${p.x}%`;node.style.top=`${p.y}%`;}
-function bindObject(node,kind,id,tree,position){
+function bindObject(node,kind,id,tree,position,back=null){
  const size=OBJECT_SIZES[kind];let current=clampPosition(kind,position.x,position.y,tree.count===30);node.classList.add('draggable');node.dataset.id=id;node.style.width=`${size.w}%`;node.style.height=`${size.h}%`;
  const editable=()=>!settlementFor(tree,today());node.setAttribute('aria-label',({tree:'트리',pot:'화분',floor:'바닥 장식',ornament:'오너먼트',topper:'별',lights:'전구 줄'})[kind]+' 위치 옮기기');node.setAttribute('role','button');node.tabIndex=editable()?0:-1;
- function paint(){node.style.left=`${current.x}%`;node.style.top=`${current.y}%`;if(kind==='tree')for(const fixedKind of ['topper','lights']){const fixed=$('.ornament.'+fixedKind);if(fixed){const p=fixedPosition(fixedKind,current);fixed.style.left=`${p.x}%`;fixed.style.top=`${p.y}%`;}}}
+ function paint(){if(back){back.style.width=node.style.width;back.style.height=node.style.height;back.style.left=`${current.x}%`;back.style.top=`${current.y}%`;}node.style.left=`${current.x}%`;node.style.top=`${current.y}%`;if(kind==='tree')for(const fixedKind of ['topper','lights']){const fixed=$('.ornament.'+fixedKind);if(fixed){const p=fixedPosition(fixedKind,current);fixed.style.left=`${p.x}%`;fixed.style.top=`${p.y}%`;}}}
  paint();let drag=null;
  node.onpointerdown=e=>{if(busy||!editable()||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();e.stopPropagation();const r=$('.garden').getBoundingClientRect();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,start:{...current},rect:r};node.setPointerCapture(e.pointerId);node.classList.add('is-dragging');$('.home').classList.add('dragging');setBusy(true);};
  node.onpointermove=e=>{if(!drag||e.pointerId!==drag.pointer)return;e.preventDefault();current=clampPosition(kind,drag.start.x+(e.clientX-drag.x)/drag.rect.width*100,drag.start.y+(e.clientY-drag.y)/drag.rect.height*100,tree.count===30);paint();};
@@ -83,8 +84,8 @@ async function treePicture(){
  const ctx=canvas.getContext('2d'),scale=1080/rect.width;
  ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);
  const room=$('.room');await room.decode();ctx.drawImage(room,0,0,1080,rect.height*scale);
- const nodes=[...document.querySelectorAll('.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
- for(const node of nodes){const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();ctx.drawImage(img,x,y,w,h,(r.left-rect.left)*scale,(r.top-rect.top)*scale,r.width*scale,r.height*scale);}
+ const nodes=[...document.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
+ for(const node of nodes){const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();const from=node.classList.contains('pot')?.17:0,to=node.classList.contains('pot-back')?.17:1;ctx.drawImage(img,x,y+h*from,w,h*(to-from),(r.left-rect.left)*scale,(r.top-rect.top+r.height*from)*scale,r.width*scale,r.height*(to-from)*scale);}
  await document.fonts.ready;ctx.fillStyle='#75391f';ctx.textAlign='center';ctx.font='42px Jua, sans-serif';ctx.fillText('30일 동안 정성껏 꾸민 나의 트리',540,canvas.height-58);
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('사진을 준비하지 못했어요. 다시 눌러 주세요.')),'image/png'));
 }
