@@ -12,3 +12,5 @@ test('floor gifts reach the cleared rug while pot and ornaments retain their bou
 test('floor objects sort by ground contact instead of asset unlock order',()=>{assert.ok(floorDepth('floor',70)<floorDepth('floor',74));assert.ok(floorDepth('floor',70)<floorDepth('pot',73.95));assert.ok(floorDepth('floor',80)>floorDepth('pot',73.95));assert.equal(floorDepth('floor',73.95+(11.9-9)/2),floorDepth('pot',73.95));assert.equal(floorDepth('ornament',50),null)});
 
 test('legacy default planter aligns in every slot while custom positions stay unchanged',()=>{assert.deepEqual(sanitizePositions({__pot:{x:50,y:70.95}},assets,1).__pot,defaultPosition('pot'));assert.deepEqual(sanitizePositions({__pot:{x:46,y:72}},assets,1).__pot,{x:46,y:72});});
+
+test('topper retains the original front-facing aspect ratio and seated base',()=>{const s=OBJECT_SIZES.topper;assert.ok(Math.abs(s.w/(s.h*1.5)-1160/1124)<.001);assert.equal(defaultPosition('topper').x,50);assert.ok(Math.abs(defaultPosition('topper').y+s.h/2-30.1)<.001)});
