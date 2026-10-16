@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "treemoa",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-16",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "podomoa-db",
+      "database_id": "8a232a2e-424c-45cc-a132-eae0e884fcef",
+      "migrations_dir": "migrations/treemoa",
+      "migrations_table": "treemoa_d1_migrations"
+    }
+  ]
+}
