@@ -10,3 +10,5 @@ test('default positions remain valid and completed tree leaves space for attache
 test('floor gifts reach the cleared rug while pot and ornaments retain their bounds',()=>{assert.ok(canPlace('floor',50,85.5));assert.equal(canPlace('floor',50,86),false);assert.equal(canPlace('pot',50,85.5),false);assert.equal(canPlace('ornament',50,85.5),false);assert.deepEqual(sanitizePositions({gift:{x:50,y:85.5}},assets,1),{gift:{x:50,y:85.5}})});
 
 test('floor objects sort by ground contact instead of asset unlock order',()=>{assert.ok(floorDepth('floor',70)<floorDepth('floor',74));assert.ok(floorDepth('floor',70)<floorDepth('pot',73.95));assert.ok(floorDepth('floor',80)>floorDepth('pot',73.95));assert.equal(floorDepth('floor',73.95+(11.9-9)/2),floorDepth('pot',73.95));assert.equal(floorDepth('ornament',50),null)});
+
+test('legacy default planter aligns in every slot while custom positions stay unchanged',()=>{assert.deepEqual(sanitizePositions({__pot:{x:50,y:70.95}},assets,1).__pot,defaultPosition('pot'));assert.deepEqual(sanitizePositions({__pot:{x:46,y:72}},assets,1).__pot,{x:46,y:72});});

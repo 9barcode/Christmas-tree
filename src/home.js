@@ -1,3 +1,4 @@
+import {planterClipPath,clipPlanter} from './planter.js';
 import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
 import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
 import manifest from './decoration-manifest.js';
@@ -31,7 +32,7 @@ let renderId=0;
 async function render(){closeSlotMenu();const id=++renderId,t=state.trees[state.selected];$('.slots').replaceChildren(...Array.from({length:5},(_,i)=>{const b=document.createElement('button');b.className='slot'+(i===state.selected?' selected':'');b.setAttribute('aria-label',`${i+1}번 트리${state.trees[i]?'':' 잠김'}`);b.setAttribute('aria-pressed',String(i===state.selected));if(!state.trees[i])b.classList.add('is-locked');b.innerHTML=state.trees[i]?`<img src="assets/trees/tree-${state.trees[i].color}.png" alt=""><span>${i+1}</span>`:`<span class="lock" aria-hidden="true"><svg viewBox="0 0 32 36"><path d="M8 15V10a8 8 0 0 1 16 0v5" fill="none" stroke="currentColor" stroke-width="5"/><rect x="3" y="14" width="26" height="21" rx="4" fill="currentColor"/><path d="M16 21v7" stroke="#69452b" stroke-width="3"/></svg></span><span>${i+1}</span>`;if(isPaid(state.trees[i],i)){b.classList.add('can-restart');b.insertAdjacentHTML('beforeend','<span class="restart-badge" aria-hidden="true">↻</span>');if(i===state.selected){b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded',String(slotMenuIndex===i));b.setAttribute('aria-label',`${i+1}번 트리, 새 트리 꾸미기 메뉴`);}}b.onclick=()=>{if(busy)return;if(!state.trees[i])return showToast('앞 트리의 첫 출석을 완료하면 열려요');if(i===state.selected&&isPaid(state.trees[i],i)){toggleSlotMenu(i,b);return;}closeSlotMenu();state.selected=i;save();render()};return b}));$('.progress').textContent=`${['첫 번째','두 번째','세 번째','네 번째','다섯 번째'][state.selected]} 트리 · 장식 ${t.count}/30`;updateCTA();if(settlementFor(t,today())){$('.progress').textContent=`${treeNames[state.selected]} 트리 · 모은 장식 ${t.count}개`;}
 const tree=await assetNode(`assets/trees/tree-${t.color}.png`,'tree'),pot=await assetNode('assets/planters/planter-wood.png','pot');
 // The rear rim sits behind the trunk; the front wall covers its base.
-const potBack=await assetNode('assets/planters/planter-wood.png','pot-back');
+const potBack=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);potBack.style.clipPath=planterClipPath(false);
 bindObject(pot,'pot','__pot',t,t.positions?.__pot??defaultPosition('pot'),potBack);
 const ornaments=[],floor=[];let n=0,f=0;
 for(const a of sequence.slice(0,t.count)){
@@ -88,7 +89,7 @@ async function treePicture(){
  ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);
  const room=$('.room');await room.decode();ctx.drawImage(room,0,0,1080,rect.height*scale);
  const nodes=[...document.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
- for(const node of nodes){const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();const from=node.classList.contains('pot')?.17:0,to=node.classList.contains('pot-back')?.17:1;ctx.drawImage(img,x,y+h*from,w,h*(to-from),(r.left-rect.left)*scale,(r.top-rect.top+r.height*from)*scale,r.width*scale,r.height*(to-from)*scale);}
+ for(const node of nodes){const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();const dx=(r.left-rect.left)*scale,dy=(r.top-rect.top)*scale,dw=r.width*scale,dh=r.height*scale;ctx.save();if(node.classList.contains('pot')||node.classList.contains('pot-back'))clipPlanter(ctx,dx,dy,dw,dh,node.classList.contains('pot'));ctx.drawImage(img,x,y,w,h,dx,dy,dw,dh);ctx.restore();}
  await document.fonts.ready;ctx.fillStyle='#75391f';ctx.textAlign='center';ctx.font='42px Jua, sans-serif';ctx.fillText('30일 동안 정성껏 꾸민 나의 트리',540,canvas.height-58);
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('사진을 준비하지 못했어요. 다시 눌러 주세요.')),'image/png'));
 }
