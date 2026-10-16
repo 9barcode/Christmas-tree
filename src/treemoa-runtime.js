@@ -54,13 +54,12 @@ export async function initializeTreemoa() {
   const session=await request('/api/auth/anonymous',null,{hash});
   const api={
     getState:()=>request('/api/trees',session.token),
-    attend:async({slot,cycle})=>{
-      const ad=await rewardedAd();
+    attend:({slot,cycle,ad})=>{
+      if(ad?.rewarded!==true) throw new Error('광고 시청을 완료해야 출석할 수 있어요.');
       return request('/api/trees/attendance',session.token,{slot,cycle,adGroupId:ad.adGroupId,eventType:ad.eventType});
     },
     savePositions:({slot,cycle,positions})=>request('/api/trees/positions',session.token,{slot,cycle,positions}),
     getPromotions:()=>request('/api/promotions',session.token),
-    logout:()=>request('/api/auth/session',session.token,{}),
   };
   window.treemoaApi=api;
   window.treeAds={showRewarded:rewardedAd};
