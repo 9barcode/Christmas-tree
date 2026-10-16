@@ -1,5 +1,5 @@
 import {rewardKey,settlementFor} from './settlement.js';
-export function isPaid(tree,index){return tree?.rewardRecord?.key===rewardKey(tree,index)&&tree.rewardRecord.status==='paid';}
+export function isPaid(tree,index){return Boolean(tree?.rewardRecord&&tree.rewardRecord.status==='paid'&&tree.rewardRecord.key===rewardKey(tree,index));}
 export function canShare(tree,index){return tree?.count===30&&isPaid(tree,index);}
 export function restartTree(state,index,today){
  const tree=state.trees[index];
