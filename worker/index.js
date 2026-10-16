@@ -149,6 +149,74 @@ async function createTree(request, env, user) {
   await env.DB.prepare('INSERT INTO treemoa_cycles (tree_id,cycle) VALUES (?,0)').bind(id).run();
   return json(request,env,{state:await treeState(env,user)});
 }
+function kstDate() {
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
+async function attendTree(request, env, user) {
+  if (!user.toss_user_key.startsWith('anon:'))
+    return error(request,env,'anonymous_session_required',403);
+  const body = await readJson(request);
+  if (!Number.isInteger(body?.slot) || body.slot < 1 || body.slot > 5 ||
+      !Number.isInteger(body?.cycle) || body.cycle < 0)
+    return error(request,env,'invalid_tree',400);
+  if (!env.REWARDED_AD_GROUP_ID)
+    return error(request,env,'reward_ad_not_configured',503,'출석 광고 설정이 필요해요.');
+  if (body.adGroupId !== env.REWARDED_AD_GROUP_ID || body.eventType !== 'userEarnedReward')
+    return error(request,env,'reward_event_invalid',400,'광고를 끝까지 시청한 뒤 다시 시도해 주세요.');
+  const tree = await env.DB.prepare('SELECT id,current_cycle,slot FROM treemoa_trees WHERE user_id=? AND slot=?')
+    .bind(user.id,body.slot).first();
+  if (!tree) return error(request,env,'tree_not_found',404);
+  if (tree.current_cycle !== body.cycle)
+    return error(request,env,'stale_tree',409,'트리 상태를 새로고침해 주세요.');
+  const today = kstDate();
+  const cycle = await env.DB.prepare('SELECT attendance_count,last_attendance_date FROM treemoa_cycles WHERE tree_id=? AND cycle=?')
+    .bind(tree.id,body.cycle).first();
+  if (!cycle) return error(request,env,'cycle_not_found',404);
+  if (cycle.last_attendance_date === today)
+    return error(request,env,'already_attended',409,'오늘은 이미 출석했어요.');
+  if (cycle.attendance_count >= 30)
+    return error(request,env,'tree_complete',409,'완성한 트리예요.');
+  const nextDay = cycle.attendance_count + 1;
+  const adId = randomId(16);
+  const adHash = await sha256(user.id + ':' + adId);
+  const statements = [
+    env.DB.prepare(`INSERT INTO treemoa_ad_completions
+      (id,user_id,tree_id,cycle,purpose,provider_receipt_hash,verified_at)
+      VALUES (?,?,?,?,'attendance',?,?)`).bind(adId,user.id,tree.id,body.cycle,adHash,new Date().toISOString()),
+    env.DB.prepare(`UPDATE treemoa_cycles SET attendance_count=attendance_count+1,last_attendance_date=?
+      WHERE tree_id=? AND cycle=? AND attendance_count=? AND (last_attendance_date IS NULL OR last_attendance_date<?)`)
+      .bind(today,tree.id,body.cycle,cycle.attendance_count,today),
+    env.DB.prepare(`INSERT INTO treemoa_attendance (tree_id,cycle,attendance_date,day_number,ad_completion_id)
+      SELECT tree_id,cycle,?,attendance_count,? FROM treemoa_cycles
+      WHERE tree_id=? AND cycle=? AND attendance_count=? AND last_attendance_date=?`)
+      .bind(today,adId,tree.id,body.cycle,nextDay,today),
+    env.DB.prepare('UPDATE treemoa_ad_completions SET consumed_at=? WHERE id=?')
+      .bind(new Date().toISOString(),adId),
+    env.DB.prepare(`INSERT INTO treemoa_missions (user_id,mission_day,points)
+      SELECT ?,30,20 WHERE ?=30 ON CONFLICT(user_id,mission_day) DO NOTHING`)
+      .bind(user.id,nextDay),
+  ];
+  const results = await env.DB.batch(statements);
+  if (results[1]?.meta?.changes !== 1 || results[2]?.meta?.changes !== 1)
+    return error(request,env,'attendance_conflict',409,'출석 상태가 바뀌었어요. 화면을 새로고침해 주세요.');
+  if (nextDay === 1 && tree.slot < 5) {
+    const colors = ['green','white','pink','blue','gold'];
+    const nextId = randomId(16);
+    const color = colors[crypto.getRandomValues(new Uint8Array(1))[0] % colors.length];
+    await env.DB.prepare(`INSERT INTO treemoa_trees (id,user_id,slot,color)
+      SELECT ?,?,?,? WHERE EXISTS (SELECT 1 FROM treemoa_trees WHERE user_id=? AND slot=?)
+      ON CONFLICT(user_id,slot) DO NOTHING`)
+      .bind(nextId,user.id,tree.slot+1,color,user.id,tree.slot).run();
+    const unlocked = await env.DB.prepare('SELECT id,current_cycle FROM treemoa_trees WHERE user_id=? AND slot=?')
+      .bind(user.id,tree.slot+1).first();
+    if (unlocked) await env.DB.prepare('INSERT INTO treemoa_cycles (tree_id,cycle) VALUES (?,?) ON CONFLICT(tree_id,cycle) DO NOTHING')
+      .bind(unlocked.id,unlocked.current_cycle).run();
+  }
+  const mission = nextDay === 30 ? {
+    day:30, points:20, status:'earned', configured:!!missionPromotionCode(env),
+  } : null;
+  return json(request,env,{state:await treeState(env,user),attendance:{day:nextDay,date:today},mission});
+}
 async function saveTreePositions(request, env, user) {
   if (!user.toss_user_key.startsWith('anon:'))
     return error(request, env, 'anonymous_session_required', 403);
