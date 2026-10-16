@@ -10,7 +10,14 @@ const TOSS_ANON_VERIFY_URL = 'https://apps-in-toss-api.toss.im/api-partner/v1/ap
 
 function allowedOrigins(env) {
   const configured = (env.ALLOWED_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean);
-  return new Set(['http://localhost:4173', 'http://localhost:5173', ...configured]);
+  const appName = (env.TOSS_APP_NAME || 'christmas-tree-decorating').toLowerCase();
+  const tossOrigins = /^[a-z0-9-]+$/.test(appName) ? [
+    `https://${appName}.apps.tossmini.com`,
+    `https://${appName}.private-apps.tossmini.com`,
+    `https://${appName}.web.tossmini.com`,
+    `https://${appName}.private-web.tossmini.com`,
+  ] : [];
+  return new Set(['http://localhost:4173', 'http://localhost:5173', ...tossOrigins, ...configured]);
 }
 function json(request, env, body, status = 200) {
   const headers = new Headers({
