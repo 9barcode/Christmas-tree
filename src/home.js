@@ -54,12 +54,18 @@ function bindObject(node,kind,id,tree,position,back=null){
  paint();let drag=null;
  node.onpointerdown=e=>{if(busy||!editable()||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();e.stopPropagation();const r=$('.garden').getBoundingClientRect();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,start:{...current},rect:r};node.setPointerCapture(e.pointerId);node.classList.add('is-dragging');$('.home').classList.add('dragging');setBusy(true);};
  node.onpointermove=e=>{if(!drag||e.pointerId!==drag.pointer)return;e.preventDefault();current=clampPosition(kind,drag.start.x+(e.clientX-drag.x)/drag.rect.width*100,drag.start.y+(e.clientY-drag.y)/drag.rect.height*100,tree.count===30);paint();};
- function finish(e,cancel){if(!drag||e.pointerId!==drag.pointer)return;if(cancel){current=drag.start;paint()}else{placeDecoration(tree,sequence,id,current.x,current.y);save()}drag=null;node.classList.remove('is-dragging');$('.home').classList.remove('dragging');setBusy(false);if(node.hasPointerCapture(e.pointerId))node.releasePointerCapture(e.pointerId);}
+ function finish(e,cancel){if(!drag||e.pointerId!==drag.pointer)return;if(cancel){current=drag.start;paint()}else{placeDecoration(tree,sequence,id,current.x,current.y);save();syncPositions(tree)}drag=null;node.classList.remove('is-dragging');$('.home').classList.remove('dragging');setBusy(false);if(node.hasPointerCapture(e.pointerId))node.releasePointerCapture(e.pointerId);}
  node.onpointerup=e=>finish(e,false);node.onpointercancel=e=>finish(e,true);node.onlostpointercapture=e=>{if(drag)finish(e,true)};
- node.onkeydown=e=>{if(busy||!editable())return;const deltas={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},d=deltas[e.key];if(!d)return;e.preventDefault();const step=e.shiftKey?3:1;current=clampPosition(kind,current.x+d[0]*step,current.y+d[1]*step,tree.count===30);paint();placeDecoration(tree,sequence,id,current.x,current.y);save();};
+ node.onkeydown=e=>{if(busy||!editable())return;const deltas={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},d=deltas[e.key];if(!d)return;e.preventDefault();const step=e.shiftKey?3:1;current=clampPosition(kind,current.x+d[0]*step,current.y+d[1]*step,tree.count===30);paint();placeDecoration(tree,sequence,id,current.x,current.y);save();syncPositions(tree);};
 }
 
 function save(){if(!preview)try{localStorage.setItem(KEY,JSON.stringify(state))}catch{showToast('기기에 진행도를 저장하지 못했어요')}}
+function syncPositions(tree){
+ if(preview||!window.treemoaApi)return;
+ const slot=state.trees.indexOf(tree)+1;
+ window.treemoaApi.savePositions({slot,cycle:tree.cycle||0,positions:tree.positions||{}})
+  .catch(()=>showToast('장식 위치를 서버에 저장하지 못했어요. 다시 옮겨 주세요.'));
+}
 let toastTimer;function showToast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,3500)}
 let busy=false;
 function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));document.querySelectorAll('.slots button,.home-links button').forEach(b=>b.disabled=value);updateCTA();}
