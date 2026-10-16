@@ -17,6 +17,7 @@
     "@apps-in-toss/web-framework": "3.7.0"
   },
   "devDependencies": {
-    "wrangler": "^4.151.0"
+    "wrangler": "^4.151.0",
+    "esbuild": "0.28.2"
   }
 }

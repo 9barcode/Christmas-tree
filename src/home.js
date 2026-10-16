@@ -1,3 +1,4 @@
+import {preparePhoto,savePhoto} from './photo-save.js';
 import manifest from './decoration-manifest.js';
 import {nextTestDate} from './test-clock.js';
 import {isPaid,canShare,restartTree} from './tree-actions.js';
@@ -89,21 +90,20 @@ async function treePicture(){
  await document.fonts.ready;ctx.fillStyle='#75391f';ctx.textAlign='center';ctx.font='42px Jua, sans-serif';ctx.fillText('30일 동안 정성껏 꾸민 나의 트리',540,canvas.height-58);
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('사진을 준비하지 못했어요. 다시 눌러 주세요.')),'image/png'));
 }
-function downloadPicture(blob){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='나의-크리스마스-트리.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function actionButton(text,handler){const b=document.createElement('button');b.className='modal-primary';b.textContent=text;b.onclick=handler;return b;}
 function showShare(){
  if(!canShare(state.trees[state.selected],state.selected))return;
  const content=document.createElement('div'),note=document.createElement('p');note.textContent='트리 사진을 준비하고 있어요.';content.append(note);
  let picture=null;const index=state.selected,source=state.trees[index];
- const run=async(button,share)=>{if(busy||!picture)return;button.disabled=true;setBusy(true);try{if(share){const file=new File([picture],'my-christmas-tree.png',{type:'image/png'});if(navigator.canShare?.({files:[file]})&&navigator.share)await navigator.share({files:[file],title:'나의 크리스마스 트리'});else{downloadPicture(picture);showToast('사진으로 저장한 뒤 친구에게 보내 주세요.');}}else{downloadPicture(picture);showToast('트리 사진을 준비했어요. 다운로드 내역을 확인해 주세요.');}}catch(error){if(error.name!=='AbortError')showToast(error.message||'사진을 다시 준비해 주세요.');}finally{button.disabled=false;setBusy(false)}};
- const save=actionButton('사진으로 저장하기',()=>run(save,false)),share=actionButton('친구에게 보내기',()=>run(share,true));save.disabled=share.disabled=true;content.append(save,share);openModal('내 트리 자랑하기',content);
+ const run=async(button)=>{if(busy||!picture)return;button.disabled=true;setBusy(true);note.textContent='열린 메뉴에서 이미지 저장 또는 보낼 앱을 선택해 주세요.';try{const result=await savePhoto(picture);note.textContent=result==='download'?'다운로드 내역에서 트리 사진을 확인해 주세요.':'사진을 앨범에 넣으려면 메뉴에서 이미지 저장을 선택해 주세요.';}catch(error){note.textContent=error.name==='AbortError'?'저장을 취소했어요. 다시 눌러 저장할 수 있어요.':'사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{button.disabled=false;setBusy(false)}};
+ const save=actionButton('사진으로 저장하기',()=>run(save)),share=actionButton('친구에게 보내기',()=>run(share));save.disabled=share.disabled=true;content.append(save,share);openModal('내 트리 자랑하기',content);
  // Prepare before the tap so native sharing retains the user's activation on mobile.
- treePicture().then(blob=>{if(state.selected!==index||state.trees[index]!==source||!content.isConnected)return;picture=blob;note.textContent='정성껏 꾸민 트리를 사진으로 간직해요.';save.disabled=share.disabled=false;}).catch(()=>{note.textContent='사진을 준비하지 못했어요. 창을 닫고 다시 눌러 주세요.';});
+ treePicture().then(preparePhoto).then(photo=>{if(state.selected!==index||state.trees[index]!==source||!content.isConnected)return;picture=photo;note.textContent='정성껏 꾸민 트리를 사진으로 간직해요.';save.disabled=share.disabled=false;}).catch(()=>{note.textContent='사진을 준비하지 못했어요. 창을 닫고 다시 눌러 주세요.';});
 }
 function showRestart(){
  const index=state.selected,tree=state.trees[index];if(!isPaid(tree,index))return;
  const content=document.createElement('div'),note=document.createElement('p');note.className='calendar-note';note.textContent=tree.count===30?'완성한 트리를 사진으로 간직할까요? 새로 시작하면 이 슬롯의 장식과 출석표가 새롭게 시작돼요.':'새로운 트리를 함께 꾸며 볼까요? 이 슬롯의 장식과 출석표가 새롭게 시작돼요.';content.append(note);
- if(tree.count===30){const save=actionButton('사진 저장 후 새로 꾸미기',async()=>{if(busy)return;save.disabled=true;setBusy(true);try{downloadPicture(await treePicture());await start();}catch{showToast('사진을 준비하지 못했어요. 다시 눌러 주세요.');}finally{save.disabled=false;setBusy(false)}});content.append(save)}
+ if(tree.count===30){const save=actionButton('사진으로 저장하기',async()=>{if(busy)return;save.disabled=true;setBusy(true);try{await savePhoto(await preparePhoto(await treePicture()));note.textContent='사진 저장을 마쳤다면 아래 버튼으로 새로 꾸며 보세요.';}catch{note.textContent='사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{save.disabled=false;setBusy(false)}});content.append(save)}
  async function start(){if(state.selected!==index||!restartTree(state,index,today()))return;save();$('dialog').close();await render();showToast('새로운 트리가 기다리고 있어요!');}
  content.append(actionButton('바로 새로 꾸미기',()=>{if(!busy)start()}));openModal('새 트리 꾸미기',content);
 }
