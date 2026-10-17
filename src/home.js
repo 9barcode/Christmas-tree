@@ -1,4 +1,5 @@
 import {createPersistence} from './persistence.js';
+import {pageEffects} from './page-effects.js';
 import {slotPreview} from './slot-preview.js';
 import {planterClipPath,clipPlanter} from './planter.js';
 import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
@@ -86,12 +87,16 @@ function showGuide(){if(busy)return;const content=document.createElement('div');
 function showRewards({stampDay=0}={}){if(busy&&!stampDay)return;const t=state.trees[state.selected],content=document.createElement('div');const info=document.createElement('p');info.className='calendar-summary';info.textContent=`${treeNames[state.selected]} 트리 · 누적 ${t.count}일 출석`;const note=document.createElement('p');note.className='calendar-note';note.textContent='출석한 날마다 루돌프 도장이 찍혀요.';const settlement=settlementFor(t,today());const points=document.createElement('p');points.className='calendar-summary';points.textContent=settlement?`모은 출석 보상 ${settlement.amount}P`:`차곡차곡 모은 출석 보상 ${t.count*(t.count+1)/2}P`;const record=currentReward(t);if(record?.status==='paid')points.textContent=`받은 출석 보상 ${record.amount}P`;content.append(info,note,points);const grid=document.createElement('ol');grid.className='stamp-calendar';grid.setAttribute('aria-label','30일 출석 도장표');for(let i=1;i<=30;i++){const cell=document.createElement('li'),done=i<=t.count;cell.className='stamp-cell'+(done?' is-complete':'')+(i===t.count+1?' is-next':'');if(i===stampDay&&done)cell.classList.add('is-stamp-pending');cell.setAttribute('aria-label',`${i}일차, ${done?'출석 완료':'미출석'}`);const label=document.createElement('span');label.className='stamp-day';label.textContent=`${i}일차`;const mark=document.createElement('div');mark.className='stamp-mark';if(done){const stamp=document.createElement('div');stamp.className='rudolph-stamp';const img=document.createElement('img');img.src=i===30?'assets/toppers/star-gold.png':'assets/ornaments/reindeer.png';img.alt=i===30?'완성 별':'';const text=document.createElement('span');text.className='stamp-word';text.textContent='출석';stamp.append(img,text);mark.append(stamp)}else{mark.classList.add('stamp-empty')}const reward=document.createElement('span');reward.className='stamp-detail';reward.textContent=i===30?'별 완성':'장식 1개';cell.append(label,mark,reward);grid.append(cell)}content.append(grid);const foot=document.createElement('p');foot.className='calendar-note';foot.textContent='각 트리의 출석표는 따로 쌓여요. 위쪽 슬롯에서 다른 트리를 선택해 보세요.';content.append(foot);openModal('출석 도장 · 보상 내역',content);if(stampDay){const cell=grid.children[stampDay-1],img=cell?.querySelector('img');Promise.resolve(img?.decode()).catch(()=>{}).then(()=>{if(!content.isConnected||!$('dialog').open)return;cell.scrollIntoView({block:'center',behavior:'instant'});setTimeout(()=>{if(!content.isConnected||!$('dialog').open)return;cell.classList.remove('is-stamp-pending');cell.classList.add('is-stamping');},180);});}}
 $('.guide-link').onclick=showGuide;$('.rewards-link').onclick=showRewards;$('.close').onclick=()=>$('dialog').close();
 $('dialog').addEventListener('click',e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close()}});
-const stopFire=await startCozyFire($('.fire'),$('.room'));window.addEventListener('pagehide',stopFire,{once:true});
-const stop=startCozySnow($('.snow'));window.addEventListener('pagehide',stop,{once:true});await render();
+const motion=pageEffects(async()=>{
+ const stopFire=await startCozyFire($('.fire'),$('.room'));
+ try{const stopSnow=startCozySnow($('.snow'));return ()=>{stopFire();stopSnow()};}
+ catch(error){stopFire();throw error;}
+},{onError:error=>console.error('Background motion failed:',error)});
+await motion.start();await render();
 
 let currentDay=today();
 function refreshAttendanceDay(){if(document.hidden||busy)return;const next=today();if(next===currentDay)return;currentDay=next;render().catch(()=>showToast('출석 화면을 다시 확인하지 못했어요. 앱을 다시 열어 주세요.'));}
-window.addEventListener('focus',refreshAttendanceDay);document.addEventListener('visibilitychange',refreshAttendanceDay);const dayTimer=setInterval(refreshAttendanceDay,60000);window.addEventListener('pagehide',()=>clearInterval(dayTimer),{once:true});
+window.addEventListener('focus',refreshAttendanceDay);document.addEventListener('visibilitychange',refreshAttendanceDay);window.addEventListener('pageshow',event=>{if(event.persisted){retrySave();refreshAttendanceDay()}});const dayTimer=setInterval(refreshAttendanceDay,60000);
 
 // Export only the scene layers, preserving the user's actual decoration positions.
 async function treePicture(){
