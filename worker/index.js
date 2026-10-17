@@ -120,8 +120,7 @@ async function treeState(env, user) {
       .bind(tree.id,tree.current_cycle).run();
     const cycle = await env.DB.prepare(`SELECT attendance_count,last_attendance_date,positions_json
       FROM treemoa_cycles WHERE tree_id=? AND cycle=?`).bind(tree.id,tree.current_cycle).first();
-    const settlement = await env.DB.prepare(`SELECT reward_ref,amount,status FROM treemoa_settlements
-      WHERE tree_id=? AND cycle=?`).bind(tree.id,tree.current_cycle).first();
+    const settlement = await ensureSettlement(env,user,tree,cycle);
     const index = tree.slot;
     const lastDate = cycle?.last_attendance_date || null;
     const count = cycle?.attendance_count || 0;
@@ -158,9 +157,12 @@ async function createTree(request, env, user) {
   return json(request,env,{state:await treeState(env,user)});
 }
 function kstDate() {
-  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const values=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+  return values.year+'-'+values.month+'-'+values.day;
 }
-async function attendTree(request, env, user) {
+function addDays(date,amount) { const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+amount);return d.toISOString().slice(0,10); }
+async function attendTree(request, env, user, context) {
   if (!user.toss_user_key.startsWith('anon:'))
     return error(request,env,'anonymous_session_required',403);
   const body = await readJson(request);
@@ -220,9 +222,12 @@ async function attendTree(request, env, user) {
     if (unlocked) await env.DB.prepare('INSERT INTO treemoa_cycles (tree_id,cycle) VALUES (?,?) ON CONFLICT(tree_id,cycle) DO NOTHING')
       .bind(unlocked.id,unlocked.current_cycle).run();
   }
-  const mission = nextDay === 30 ? {
-    day:30, points:20, status:'earned', configured:!!missionPromotionCode(env),
-  } : null;
+  let mission = nextDay === 30 ? {day:30,points:20,status:'earned',configured:!!configuredMissionCode(env)} : null;
+  if(mission?.configured) {
+    const payoutRequest=new Request(request.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({day:30,action:'pay'})});
+    const payout=claimMission(payoutRequest,env,user).catch(cause=>console.warn('[treemoa.mission]',cause instanceof Error?cause.name:'unknown'));
+    if(context?.waitUntil)context.waitUntil(payout);else await payout;
+  }
   return json(request,env,{state:await treeState(env,user),attendance:{day:nextDay,date:today},mission});
 }
 async function saveTreePositions(request, env, user) {
@@ -283,7 +288,7 @@ async function finalizePayment(env,user,payment) {
 async function ensureSettlement(env,user,tree,cycle) {
   if(!cycle||cycle.attendance_count<1)return null;
   const today=kstDate(),last=cycle.last_attendance_date;
-  if(cycle.attendance_count<30&&last>=new Date(Date.now()-86400000).toISOString().slice(0,10))return null;
+  if(cycle.attendance_count<30&&last>=addDays(today,-1))return null;
   const reason=cycle.attendance_count===30?'complete':'settled';
   await env.DB.prepare(`INSERT INTO treemoa_settlements (reward_ref,tree_id,cycle,attendance_count,amount,reason,status)
     VALUES (?,?,?,?,?,?, 'ready') ON CONFLICT(tree_id,cycle) DO NOTHING`)
