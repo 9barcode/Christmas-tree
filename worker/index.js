@@ -1,4 +1,5 @@
 import { missionPromotionCode } from './promotion-codes.js';
+import { advancePayment, loadPayment } from './promotion-payments.js';
 
 const requiredTables = [
   'treemoa_users', 'treemoa_sessions', 'treemoa_trees', 'treemoa_cycles',
@@ -242,6 +243,133 @@ async function saveTreePositions(request, env, user) {
   if (!result.meta?.changes) return error(request,env,'cycle_not_found',404);
   return json(request,env,{ok:true});
 }
+
+function configuredMissionCode(env) { return missionPromotionCode(env); }
+function paymentMessage(code) {
+  const messages={'4100':'프로모션 코드를 확인해 주세요.','4109':'프로모션이 실행 중이 아니에요.','4110':'토스 지급 처리에 실패했어요.','4112':'프로모션 예산이 부족해요.','4114':'1회 지급 한도를 확인해 주세요.','4116':'프로모션 한도와 예산을 확인해 주세요.'};
+  return messages[code||'']||'지급 결과를 확인 중이에요.';
+}
+function paymentView(payment) {
+  return {status:payment.state==='succeeded'?'success':payment.state==='failed'?'failed':'pending',
+    paid:payment.state==='succeeded'&&!payment.promotion_code.startsWith('TEST_'),
+    testMode:payment.promotion_code.startsWith('TEST_'),
+    message:payment.state==='failed'?paymentMessage(payment.error_code):payment.state==='succeeded'?undefined:'토스 지급 결과를 확인 중이에요. 잠시 후 다시 확인해 주세요.'};
+}
+async function finalizePayment(env,user,payment) {
+  if(!payment||!['succeeded','failed'].includes(payment.state))return;
+  if(payment.kind==='mission') {
+    if(payment.state==='failed') {
+      await env.DB.prepare("UPDATE treemoa_missions SET claim_token=NULL WHERE user_id=? AND claim_token=? AND status='earned'").bind(user.id,'server:'+payment.id).run();
+    } else if(payment.promotion_code.startsWith('TEST_')) {
+      await env.DB.prepare("UPDATE treemoa_missions SET tested_at=COALESCE(tested_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),reward_key=?,claim_token=NULL,promotion_code=? WHERE user_id=? AND claim_token=? AND status='earned'")
+        .bind(payment.provider_key,payment.promotion_code,user.id,'server:'+payment.id).run();
+    } else {
+      await env.DB.prepare("UPDATE treemoa_missions SET status='paid',paid_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),reward_key=?,claim_token=NULL,promotion_code=? WHERE user_id=? AND claim_token=? AND status='earned'")
+        .bind(payment.provider_key,payment.promotion_code,user.id,'server:'+payment.id).run();
+    }
+    return;
+  }
+  if(payment.state==='failed') {
+    await env.DB.prepare("UPDATE treemoa_settlements SET status='ready',provider_payment_id=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
+      .bind(payment.reward_ref,payment.id).run();
+  } else if(payment.promotion_code.startsWith('TEST_')) {
+    await env.DB.prepare("UPDATE treemoa_settlements SET status='ready',provider_payment_id=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
+      .bind(payment.reward_ref,payment.id).run();
+  } else {
+    await env.DB.prepare("UPDATE treemoa_settlements SET status='paid',paid_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
+      .bind(payment.reward_ref,payment.id).run();
+  }
+}
+async function ensureSettlement(env,user,tree,cycle) {
+  if(!cycle||cycle.attendance_count<1)return null;
+  const today=kstDate(),last=cycle.last_attendance_date;
+  if(cycle.attendance_count<30&&last>=new Date(Date.now()-86400000).toISOString().slice(0,10))return null;
+  const reason=cycle.attendance_count===30?'complete':'settled';
+  await env.DB.prepare(`INSERT INTO treemoa_settlements (reward_ref,tree_id,cycle,attendance_count,amount,reason,status)
+    VALUES (?,?,?,?,?,?, 'ready') ON CONFLICT(tree_id,cycle) DO NOTHING`)
+    .bind(randomId(),tree.id,tree.current_cycle,cycle.attendance_count,cycle.attendance_count*(cycle.attendance_count+1)/2,reason).run();
+  return env.DB.prepare('SELECT reward_ref,amount,status,provider_payment_id FROM treemoa_settlements WHERE tree_id=? AND cycle=?')
+    .bind(tree.id,tree.current_cycle).first();
+}
+async function settlementStatus(request,env,user,body,claim=false) {
+  if(!user.toss_user_key.startsWith('anon:'))return error(request,env,'anonymous_session_required',403);
+  if(!Number.isInteger(body?.treeId)||body.treeId<1||body.treeId>5||!Number.isInteger(body?.cycle)||body.cycle<0)
+    return error(request,env,'invalid_settlement',400);
+  const tree=await env.DB.prepare('SELECT id,current_cycle,slot FROM treemoa_trees WHERE user_id=? AND slot=?').bind(user.id,body.treeId).first();
+  if(!tree||tree.current_cycle!==body.cycle)return error(request,env,'stale_tree',409);
+  const cycle=await env.DB.prepare('SELECT attendance_count,last_attendance_date FROM treemoa_cycles WHERE tree_id=? AND cycle=?').bind(tree.id,body.cycle).first();
+  const settlement=await ensureSettlement(env,user,tree,cycle);
+  if(!settlement)return error(request,env,'settlement_not_ready',409);
+  if(body.rewardRef&&body.rewardRef!==settlement.reward_ref)return error(request,env,'stale_reward',409);
+  if(settlement.status==='paid')return json(request,env,{rewardRef:settlement.reward_ref,amount:settlement.amount,status:'paid'});
+  if(settlement.provider_payment_id) {
+    const payment=await advancePayment(env,user,settlement.provider_payment_id);
+    await finalizePayment(env,user,payment);
+    const latest=await env.DB.prepare('SELECT status FROM treemoa_settlements WHERE reward_ref=?').bind(settlement.reward_ref).first();
+    return json(request,env,{...paymentView(payment),rewardRef:settlement.reward_ref,amount:settlement.amount,status:latest?.status==='paid'?'paid':payment.state==='failed'?'ready':'pending'});
+  }
+  if(!claim)return json(request,env,{rewardRef:settlement.reward_ref,amount:settlement.amount,status:'ready'});
+  const code=(env.TOSS_PROMOTION_CODE_ATTENDANCE||'').trim();
+  if(!code||!env.TOSS_MTLS)return error(request,env,'attendance_promotion_not_configured',503,'출석 보상 지급을 준비 중이에요. 보상은 보존돼요.');
+  if(body.adGroupId!==env.REWARDED_AD_GROUP_ID||body.eventType!=='userEarnedReward')
+    return error(request,env,'reward_event_invalid',400,'광고를 끝까지 시청해 주세요.');
+  const id=randomId(), adId=randomId(16), tokenHash=await sha256(user.id+':'+adId), now=Date.now();
+  const results=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO treemoa_ad_completions (id,user_id,tree_id,cycle,purpose,provider_receipt_hash,verified_at)
+      VALUES (?,?,?,?,'settlement',?,?)`).bind(adId,user.id,tree.id,body.cycle,tokenHash,new Date().toISOString()),
+    env.DB.prepare(`UPDATE treemoa_settlements SET status='pending',provider_payment_id=?,ad_completion_id=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE reward_ref=? AND status='ready' AND provider_payment_id IS NULL`).bind(id,adId,settlement.reward_ref),
+    env.DB.prepare(`INSERT INTO treemoa_promotion_payments (id,user_id,kind,reward_ref,promotion_code,amount,state,created_at,updated_at)
+      SELECT ?,user_id,'settlement',reward_ref,?,?, 'creating',?,? FROM treemoa_settlements WHERE reward_ref=? AND provider_payment_id=?`)
+      .bind(id,code,settlement.amount,now,now,settlement.reward_ref,id),
+    env.DB.prepare('UPDATE treemoa_ad_completions SET consumed_at=? WHERE id=?').bind(new Date().toISOString(),adId),
+  ]);
+  if(results[2]?.meta?.changes!==1) {
+    const current=await env.DB.prepare('SELECT status,provider_payment_id FROM treemoa_settlements WHERE reward_ref=?').bind(settlement.reward_ref).first();
+    if(current?.provider_payment_id)return json(request,env,{rewardRef:settlement.reward_ref,amount:settlement.amount,status:'pending'});
+    return error(request,env,'settlement_conflict',409);
+  }
+  const payment=await advancePayment(env,user,id);
+  await finalizePayment(env,user,payment);
+  const latest=await env.DB.prepare('SELECT status FROM treemoa_settlements WHERE reward_ref=?').bind(settlement.reward_ref).first();
+  return json(request,env,{...paymentView(payment),rewardRef:settlement.reward_ref,amount:settlement.amount,status:latest?.status==='paid'?'paid':payment.state==='failed'?'ready':'pending'});
+}
+async function claimMission(request,env,user,context) {
+  if(!user.toss_user_key.startsWith('anon:'))return error(request,env,'anonymous_session_required',403);
+  const body=await readJson(request);
+  if(!body||body.day!==30||!['pay','status'].includes(body.action))return error(request,env,'invalid_mission',400);
+  let row=await env.DB.prepare('SELECT mission_day AS day,points,status,claim_token,reward_key,promotion_code,tested_at FROM treemoa_missions WHERE user_id=? AND mission_day=30').bind(user.id).first();
+  if(!row)return error(request,env,'mission_not_earned',404);
+  if(row.status==='paid')return json(request,env,{status:'success',paid:true,day:30});
+  const code=configuredMissionCode(env);
+  if(!row.claim_token&&code.startsWith('TEST_')&&row.tested_at)return json(request,env,{status:'success',paid:false,testMode:true,day:30});
+  if(row.claim_token?.startsWith('server:')) {
+    const payment=await advancePayment(env,user,row.claim_token.slice(7));await finalizePayment(env,user,payment);
+    return json(request,env,{...paymentView(payment),day:30});
+  }
+  if(body.action==='status')return json(request,env,{status:'ready',paid:false,day:30});
+  if(!code||!env.TOSS_MTLS)return error(request,env,'mission_not_configured',503,'30일 프로모션 지급 설정이 필요해요.');
+  const id=randomId(),token='server:'+id,now=Date.now();
+  const ref='30:'+(code.startsWith('TEST_')?'test':'live');
+  const results=await env.DB.batch([
+    env.DB.prepare("UPDATE treemoa_missions SET claim_token=?,promotion_code=? WHERE user_id=? AND mission_day=30 AND status='earned' AND claim_token IS NULL AND (?=0 OR tested_at IS NULL)")
+      .bind(token,code,user.id,code.startsWith('TEST_')?1:0),
+    env.DB.prepare(`INSERT INTO treemoa_promotion_payments (id,user_id,kind,reward_ref,promotion_code,amount,state,created_at,updated_at)
+      SELECT ?,user_id,'mission',?,?,points,'creating',?,? FROM treemoa_missions WHERE user_id=? AND mission_day=30 AND claim_token=?`)
+      .bind(id,ref,code,now,now,user.id,token),
+  ]);
+  if(results[1]?.meta?.changes!==1) {
+    row=await env.DB.prepare('SELECT claim_token FROM treemoa_missions WHERE user_id=? AND mission_day=30').bind(user.id).first();
+    if(row?.claim_token?.startsWith('server:')) {
+      const payment=await advancePayment(env,user,row.claim_token.slice(7));await finalizePayment(env,user,payment);
+      return json(request,env,{...paymentView(payment),day:30});
+    }
+    return json(request,env,{status:'pending',paid:false,day:30});
+  }
+  const payment=await advancePayment(env,user,id);await finalizePayment(env,user,payment);
+  return json(request,env,{...paymentView(payment),day:30});
+}
+
 async function promotions(request, env, user) {
   if (!user.toss_user_key.startsWith('anon:'))
     return error(request, env, 'anonymous_session_required', 403);
