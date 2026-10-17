@@ -37,3 +37,10 @@ button:not(:disabled):active{filter:brightness(.94)}
 .stamp-cell.is-stamping .rudolph-stamp{animation:attendance-stamp .72s cubic-bezier(.2,.75,.25,1) both}
 @keyframes attendance-stamp{0%{opacity:0;transform:translateY(-18px) scale(1.65) rotate(-16deg)}48%{opacity:1;transform:translateY(2px) scale(.9) rotate(-6deg)}68%{transform:translateY(-2px) scale(1.08) rotate(-6deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(-6deg)}}
 @media(prefers-reduced-motion:reduce){.stamp-cell.is-stamping .rudolph-stamp{animation:none;opacity:1}}
+
+/* Preserve painted controls while keeping small-screen targets usable. */
+.slots .slot{width:max(44px,10.5cqw);height:max(44px,10.5cqw);flex:0 0 auto}
+dialog .close{width:44px;height:44px;top:4px;right:4px;display:grid;place-items:center}
+.home button:focus-visible,dialog button:focus-visible{outline:3px solid #fff4c9;outline-offset:3px;box-shadow:0 0 0 5px #654221}
+dialog .close:focus-visible{outline-color:#795832;box-shadow:none}
+
