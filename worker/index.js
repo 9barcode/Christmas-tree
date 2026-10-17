@@ -128,7 +128,7 @@ async function treeState(env, user) {
     result.push({
       id: tree.slot, serverId: tree.id, color: tree.color, count, lastDate,
       cycle: tree.current_cycle, positions: JSON.parse(cycle?.positions_json || '{}'),
-      ...(settlement ? {rewardRecord: {key,rewardRef:settlement.reward_ref,amount:settlement.amount,status:settlement.status}} : {}),
+      ...(settlement ? {rewardRecord: {key,rewardRef:settlement.reward_ref,amount:settlement.amount,status:settlement.status,testMode:!!settlement.tested_at}} : {}),
     });
   }
   return {version:1,selected:0,trees:result};
@@ -278,7 +278,7 @@ async function finalizePayment(env,user,payment) {
     await env.DB.prepare("UPDATE treemoa_settlements SET status='ready',provider_payment_id=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
       .bind(payment.reward_ref,payment.id).run();
   } else if(payment.promotion_code.startsWith('TEST_')) {
-    await env.DB.prepare("UPDATE treemoa_settlements SET status='ready',provider_payment_id=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
+    await env.DB.prepare("UPDATE treemoa_settlements SET status='paid',paid_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),tested_at=COALESCE(tested_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
       .bind(payment.reward_ref,payment.id).run();
   } else {
     await env.DB.prepare("UPDATE treemoa_settlements SET status='paid',paid_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE reward_ref=? AND provider_payment_id=? AND status='pending'")
@@ -375,6 +375,25 @@ async function claimMission(request,env,user,context) {
   return json(request,env,{...paymentView(payment),day:30});
 }
 
+
+async function restartTree(request,env,user) {
+  if(!user.toss_user_key.startsWith('anon:'))return error(request,env,'anonymous_session_required',403);
+  const body=await readJson(request);
+  if(!Number.isInteger(body?.slot)||body.slot<1||body.slot>5||!Number.isInteger(body?.cycle)||body.cycle<0||typeof body.rewardRef!=='string')
+    return error(request,env,'invalid_tree',400);
+  const tree=await env.DB.prepare('SELECT id,current_cycle FROM treemoa_trees WHERE user_id=? AND slot=?').bind(user.id,body.slot).first();
+  if(!tree||tree.current_cycle!==body.cycle)return error(request,env,'stale_tree',409);
+  const paid=await env.DB.prepare("SELECT 1 FROM treemoa_settlements WHERE tree_id=? AND cycle=? AND reward_ref=? AND status='paid'").bind(tree.id,body.cycle,body.rewardRef).first();
+  if(!paid)return error(request,env,'settlement_not_paid',409);
+  const next=body.cycle+1;
+  const results=await env.DB.batch([
+    env.DB.prepare('UPDATE treemoa_trees SET current_cycle=? WHERE id=? AND user_id=? AND current_cycle=?').bind(next,tree.id,user.id,body.cycle),
+    env.DB.prepare('INSERT INTO treemoa_cycles (tree_id,cycle) SELECT id,? FROM treemoa_trees WHERE id=? AND current_cycle=? ON CONFLICT(tree_id,cycle) DO NOTHING').bind(next,tree.id,next),
+  ]);
+  if(results[0]?.meta?.changes!==1)return error(request,env,'tree_restart_conflict',409);
+  return json(request,env,{state:await treeState(env,user)});
+}
+
 async function promotions(request, env, user) {
   if (!user.toss_user_key.startsWith('anon:'))
     return error(request, env, 'anonymous_session_required', 403);
@@ -382,6 +401,11 @@ async function promotions(request, env, user) {
       claim_token FROM treemoa_missions WHERE user_id=? AND mission_day=30`)
     .bind(user.id).first();
   if (!row) return json(request, env, {missions: []});
+  if(row.claim_token?.startsWith('server:')) {
+    const payment=await advancePayment(env,user,row.claim_token.slice(7));
+    await finalizePayment(env,user,payment);
+    row=await env.DB.prepare(`SELECT mission_day AS day,points,status,tested_at,claim_token FROM treemoa_missions WHERE user_id=? AND mission_day=30`).bind(user.id).first();
+  }
   return json(request, env, {missions: [{
     day: 30,
     points: 20,
@@ -393,7 +417,7 @@ async function promotions(request, env, user) {
   }]});
 }
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return json(request, env, {}, 204);
     if (url.pathname === '/api/health')
@@ -420,7 +444,7 @@ export default {
       }
     }
     if (url.pathname === '/api/trees/attendance' && request.method === 'POST') {
-      try { return await attendTree(request,env,user); }
+      try { return await attendTree(request,env,user,context); }
       catch (cause) {
         console.error('[treemoa.attendance]',cause instanceof Error ? cause.name : 'unknown');
         return error(request,env,'attendance_unavailable',503);
@@ -432,6 +456,26 @@ export default {
         console.error('[treemoa.trees.positions]',cause instanceof Error ? cause.name : 'unknown');
         return error(request,env,'tree_save_failed',503);
       }
+    }
+    if (url.pathname === '/api/settlements/prepare' && request.method === 'POST') {
+      try { return await settlementStatus(request,env,user,await readJson(request),false); }
+      catch (cause) { console.error('[treemoa.settlement.prepare]',cause instanceof Error?cause.name:'unknown');return error(request,env,'settlement_unavailable',503); }
+    }
+    if (url.pathname === '/api/settlements/status' && request.method === 'POST') {
+      try { return await settlementStatus(request,env,user,await readJson(request),false); }
+      catch (cause) { console.error('[treemoa.settlement.status]',cause instanceof Error?cause.name:'unknown');return error(request,env,'settlement_unavailable',503); }
+    }
+    if (url.pathname === '/api/settlements/claim' && request.method === 'POST') {
+      try { return await settlementStatus(request,env,user,await readJson(request),true); }
+      catch (cause) { console.error('[treemoa.settlement.claim]',cause instanceof Error?cause.name:'unknown');return error(request,env,'settlement_result_unknown',503,'지급 결과를 확인 중이에요. 같은 보상 키로 다시 조회합니다.'); }
+    }
+    if (url.pathname === '/api/trees/restart' && request.method === 'POST') {
+      try { return await restartTree(request,env,user); }
+      catch (cause) { console.error('[treemoa.tree.restart]',cause instanceof Error?cause.name:'unknown');return error(request,env,'tree_restart_failed',503); }
+    }
+    if (url.pathname === '/api/promotions/claim' && request.method === 'POST') {
+      try { return await claimMission(request,env,user); }
+      catch (cause) { console.error('[treemoa.mission]',cause instanceof Error?cause.name:'unknown');return error(request,env,'mission_result_unknown',503,'프로모션 결과를 확인 중이에요.'); }
     }
     if (url.pathname === '/api/promotions' && request.method === 'GET') {
       try { return await promotions(request, env, user); }
