@@ -1,8 +1,8 @@
 // No write endpoints are exposed until Toss authentication and ad verification exist.
 const requiredTables = [
-  'treemoa_users', 'treemoa_sessions', 'treemoa_trees', 'treemoa_cycles',
-  'treemoa_ad_completions', 'treemoa_attendance', 'treemoa_settlements',
-  'treemoa_promotion_api_calls',
+  'tree_users', 'tree_sessions', 'tree_trees', 'tree_cycles',
+  'tree_ad_completions', 'tree_attendance', 'tree_settlements',
+  'tree_promotion_api_calls',
 ];
 export default {
   async fetch(request, env) {

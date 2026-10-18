@@ -9,8 +9,8 @@
       "binding": "DB",
       "database_name": "podomoa-db",
       "database_id": "8a232a2e-424c-45cc-a132-eae0e884fcef",
-      "migrations_dir": "migrations/treemoa",
-      "migrations_table": "treemoa_d1_migrations"
+      "migrations_dir": "migrations/tree",
+      "migrations_table": "tree_d1_migrations"
     }
   ]
 }
