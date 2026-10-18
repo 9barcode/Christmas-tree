@@ -4,7 +4,8 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
-      - 'migrations/treemoa/**'
+      - 'migrations/**'
+      - 'scripts/migrate-tree.mjs'
       - 'wrangler.jsonc'
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
@@ -33,7 +34,7 @@ jobs:
       - run: npm ci
       - name: Check Worker syntax
         run: node --check worker/index.js
-      - name: Create only treemoa tables and migration history
+      - name: Create only tree_ tables and migration history
         run: npm run db:migrate:remote
       - name: Deploy treemoa Worker
         run: npm run worker:deploy > treemoa-deploy.log 2>&1 || { cat treemoa-deploy.log; exit 1; }
