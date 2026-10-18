@@ -37,6 +37,8 @@ jobs:
       - name: Create only tree_ tables and migration history
         run: npm run db:migrate:remote
       - name: Deploy treemoa Worker
+        env:
+          WRANGLER_LOG: debug
         run: npm run worker:deploy > treemoa-deploy.log 2>&1 || { cat treemoa-deploy.log; exit 1; }
       - name: Verify D1 schema through Worker
         run: |
@@ -50,3 +52,50 @@ jobs:
           if (!response.ok || health.service !== 'treemoa' || health.database !== 'ready') throw Error('Treemoa schema is not ready');
           console.log(base, health);
           JS
+      - name: Collect sanitized Wrangler failure logs
+        if: failure()
+        env:
+          DIAGNOSTICS_DIR: ${{ runner.temp }}/treemoa-diagnostics
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          destination = Path(os.environ["DIAGNOSTICS_DIR"])
+          destination.mkdir(parents=True, exist_ok=True)
+          secrets = [os.environ.get(name, "") for name in (
+              "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "GITHUB_TOKEN"
+          )]
+          sources = [Path("treemoa-deploy.log")]
+          sources.extend(sorted((Path.home() / ".config/.wrangler/logs").glob("*.log")))
+          sources.extend(sorted((Path.home() / ".wrangler/logs").glob("*.log")))
+          count = 0
+          for source in dict.fromkeys(sources):
+              if not source.is_file():
+                  continue
+              value = source.read_text(encoding="utf-8", errors="replace")
+              for secret in secrets:
+                  if secret:
+                      value = value.replace(secret, "[REDACTED]")
+              # Remove credential headers, bearer values and common structured secrets.
+              value = re.sub(r"(?im)^.*(?:authorization|cookie|x-auth-key|x-auth-email|api[_-]?token).*$",
+                             "[REDACTED credential line]", value)
+              value = re.sub(r"(?i)bearer\s+[^\s\"',}]+", "Bearer [REDACTED]", value)
+              value = re.sub(r"""(?i)(["']?(?:access_token|refresh_token|client_secret|password)["']?\s*[:=]\s*)[^\r\n]+""",
+                             r"\1[REDACTED]", value)
+              (destination / f"{count:02d}-{source.name}").write_text(value, encoding="utf-8")
+              count += 1
+          (destination / "README.txt").write_text(
+              f"Collected {count} sanitized logs. Includes deployment stdout and Wrangler logs.\n"
+              "Inspect HTTP status, API path and Cloudflare error code.\n",
+              encoding="utf-8")
+          PY
+      - name: Upload Wrangler failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: treemoa-wrangler-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/treemoa-diagnostics/
+          if-no-files-found: warn
+          retention-days: 3
