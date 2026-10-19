@@ -1,3 +1,4 @@
+import { publicAdConfig } from './config.js';
 // No write endpoints are exposed until Toss authentication and ad verification exist.
 const requiredTables = [
   'tree_users', 'tree_sessions', 'tree_trees', 'tree_cycles',
@@ -7,6 +8,12 @@ const requiredTables = [
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
+    if (path === '/api/config') {
+      const headers = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store', Allow: 'GET, OPTIONS' };
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+      if (request.method !== 'GET') return Response.json({error: 'method_not_allowed'}, {status: 405, headers});
+      return Response.json({ads: publicAdConfig(env)}, {headers});
+    }
     if (path !== '/api/health') return Response.json({error: 'not_found'}, {status: 404});
     if (request.method !== 'GET') return Response.json({error: 'method_not_allowed'}, {status: 405, headers: {Allow: 'GET'}});
     try {
