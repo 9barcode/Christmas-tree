@@ -35,7 +35,7 @@ jobs:
       - run: npm ci
       - name: Configure Treemoa mTLS binding
         env:
-          TOSS_MTLS_CERTIFICATE_ID: ${{ vars.TOSS_MTLS_CERTIFICATE_ID }}
+          TOSS_MTLS_CERTIFICATE_ID: ${{ secrets.TOSS_MTLS_CERTIFICATE_ID }}
         run: |
           node --input-type=module <<'JS'
           import {readFileSync,writeFileSync} from 'node:fs';
