@@ -18,3 +18,14 @@ export function promotionConfig(env) {
   }
   return { mode, code: !configured ? '' : mode === 'test' && !configured.startsWith('TEST_') ? 'TEST_' + configured : configured };
 }
+
+export function missionConfig(env, day) {
+  if (![15,30].includes(day)) throw Error('Invalid mission day');
+  const mode=value(env.TOSS_PROMOTION_MODE)||'live';
+  if (!['live','test'].includes(mode)) throw Error('Invalid TOSS_PROMOTION_MODE');
+  const raw=value(env['TOSS_PROMOTION_CODE_DAY_'+day]);
+  if (mode==='live' && raw.startsWith('TEST_')) throw Error('Test code in live mode');
+  const amount=Number(value(env['TOSS_PROMOTION_AMOUNT_DAY_'+day]) || (day===15?'15':'20'));
+  if (!Number.isSafeInteger(amount)||amount<1) throw Error('Invalid promotion amount');
+  return {mode,amount,code:!raw?'':mode==='test'&&!raw.startsWith('TEST_')?'TEST_'+raw:raw};
+}

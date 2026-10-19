@@ -1,12 +1,16 @@
+import {handleMissions} from './missions.js';
 import { publicAdConfig } from './config.js';
-// No write endpoints are exposed until Toss authentication and ad verification exist.
+// Mission writes require a verified Toss anonymous session and server-derived attendance.
 const requiredTables = [
   'tree_users', 'tree_sessions', 'tree_trees', 'tree_cycles',
   'tree_ad_completions', 'tree_attendance', 'tree_settlements',
   'tree_promotion_api_calls',
+  'tree_mission_progress', 'tree_promotion_missions', 'tree_mission_payments', 'tree_mission_api_calls',
 ];
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
+    const missionResponse = await handleMissions(request, env, context);
+    if (missionResponse) return missionResponse;
     const path = new URL(request.url).pathname;
     if (path === '/api/config') {
       const headers = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store', Allow: 'GET, OPTIONS' };

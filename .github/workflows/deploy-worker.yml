@@ -33,6 +33,20 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
       - run: npm ci
+      - name: Configure Treemoa mTLS binding
+        env:
+          TOSS_MTLS_CERTIFICATE_ID: ${{ vars.TOSS_MTLS_CERTIFICATE_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const certificateId=process.env.TOSS_MTLS_CERTIFICATE_ID?.trim();
+          if(certificateId){
+            if(!/^[a-f0-9-]{32,36}$/i.test(certificateId))throw Error('Invalid TOSS_MTLS_CERTIFICATE_ID');
+            const config=JSON.parse(readFileSync('wrangler.jsonc','utf8'));
+            config.mtls_certificates=[{binding:'TOSS_MTLS',certificate_id:certificateId}];
+            writeFileSync('wrangler.jsonc',JSON.stringify(config,null,2));
+          }else console.info('TOSS_MTLS_CERTIFICATE_ID missing: identity verification and promotion payouts remain unavailable.');
+          JS
       - name: Check Worker syntax
         run: node --check worker/index.js
       - name: Create only tree_ tables and migration history

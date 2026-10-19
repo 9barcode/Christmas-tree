@@ -5,7 +5,8 @@ export async function showTreeRewarded(treeId, options = {}) {
   const {ads} = await loadServiceConfig();
   const adGroupId = ads.rewardedAdGroupIds[treeId];
   if (!adGroupId) throw Error(treeId + '번 트리의 리워드 광고 설정이 필요해요.');
-  if (!window.treeAds?.showRewarded) throw Error('광고 연결을 준비하고 있어요.');
+  const show = window.treeAds?.showRewarded?.bind(window.treeAds) || (await import('./native-promotions.js')).showNativeRewarded;
   // Explicit ID overrides caller options; never substitute another tree's ad.
-  return window.treeAds.showRewarded({...options, treeId, adGroupId});
+  const result = await show({...options, treeId, adGroupId});
+  return {...result, adGroupId, eventType: result?.rewarded === true ? 'userEarnedReward' : 'dismissed'};
 }
