@@ -10,6 +10,7 @@ export function loadServiceConfig() {
     if (typeof config?.ads?.bannerAdGroupId !== 'string' ||
         ![1,2,3,4,5].every(treeId => typeof config?.ads?.rewardedAdGroupIds?.[treeId] === 'string')) throw Error('광고 설정을 확인해 주세요.');
     return Object.freeze({ ads: Object.freeze({
+      interstitialAdGroupId: typeof config.ads.interstitialAdGroupId==='string'?config.ads.interstitialAdGroupId.trim():'',
       bannerAdGroupId: config.ads.bannerAdGroupId.trim(),
       loadingListAdGroupId: typeof config.ads.loadingListAdGroupId==='string'?config.ads.loadingListAdGroupId.trim():'',
       loadingImageAdGroupId: typeof config.ads.loadingImageAdGroupId==='string'?config.ads.loadingImageAdGroupId.trim():'',

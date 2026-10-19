@@ -20,6 +20,7 @@
 - 기존 포도 키우기의 출석·광고·보상 조건 유지.
 
 ## 문서 및 시안
+- [서버 담당자 전달용 광고 런타임 변수명](docs/runtime-ad-variables.md)
 - [배너 광고 배치·설정](docs/banner-placements.md): 로딩 리스트형/이미지형 각 1개와 트리 장면 바깥 하단 지면. 저장·공유 사진에는 제외.
 - [전체 기획서](docs/tree-decoration-plan.md)
 - [최신 슬롯 UI 시안](docs/images/tree-slots-concept.png)
