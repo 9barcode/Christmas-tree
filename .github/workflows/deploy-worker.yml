@@ -6,6 +6,7 @@ on:
       - 'worker/**'
       - 'migrations/**'
       - 'scripts/migrate-tree.mjs'
+      - 'scripts/diagnose-cloudflare.mjs'
       - 'wrangler.jsonc'
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
@@ -37,6 +38,7 @@ jobs:
       - name: Create only tree_ tables and migration history
         run: npm run db:migrate:remote
       - name: Deploy treemoa Worker
+        id: worker-deploy
         env:
           WRANGLER_LOG: debug
         run: npm run worker:deploy > treemoa-deploy.log 2>&1 || { cat treemoa-deploy.log; exit 1; }
@@ -52,6 +54,12 @@ jobs:
           if (!response.ok || health.service !== 'treemoa' || health.database !== 'ready') throw Error('Treemoa schema is not ready');
           console.log(base, health);
           JS
+      - name: Diagnose Cloudflare API permissions sequentially
+        if: failure() && steps.worker-deploy.outcome == 'failure'
+        continue-on-error: true
+        env:
+          DIAGNOSTICS_DIR: ${{ runner.temp }}/treemoa-diagnostics
+        run: node scripts/diagnose-cloudflare.mjs
       - name: Collect sanitized Wrangler failure logs
         if: failure()
         env:
