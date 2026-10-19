@@ -108,7 +108,7 @@ async function treePicture(){
  const ctx=canvas.getContext('2d'),scale=1080/rect.width;
  ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);
  const room=$('.room');await room.decode();ctx.drawImage(room,0,0,1080,rect.height*scale);
- const nodes=[...document.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
+ const nodes=[...home.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
  for(const node of nodes){const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();const dx=(r.left-rect.left)*scale,dy=(r.top-rect.top)*scale,dw=r.width*scale,dh=r.height*scale;ctx.save();if(node.classList.contains('pot')||node.classList.contains('pot-back'))clipPlanter(ctx,dx,dy,dw,dh,node.classList.contains('pot'));ctx.drawImage(img,x,y,w,h,dx,dy,dw,dh);ctx.restore();}
  await document.fonts.ready;ctx.fillStyle='#75391f';ctx.textAlign='center';ctx.font='42px Jua, sans-serif';ctx.fillText('30일 동안 정성껏 꾸민 나의 트리',540,canvas.height-58);
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('사진을 준비하지 못했어요. 다시 눌러 주세요.')),'image/png'));

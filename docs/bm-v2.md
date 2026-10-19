@@ -126,6 +126,10 @@
 
 ## 9. 공식 문서와 운영 확인
 
+### 배너 지면 추가
+
+로딩 화면에 텍스트 중심 리스트형 1개와 이미지 피드형 1개, 홈 장면 바깥 하단에 단일 배너 지면을 둔다. 트리 꾸미기 영역과 저장·공유 사진에는 포함하지 않는다. 배너 클릭·노출에는 보상을 연결하지 않고 장식 일일 한도에도 포함하지 않는다. 상세 배치와 운영 설정은 [배너 지면 문서](banner-placements.md)를 따른다. 이 배너 구현과 별개로 BM v2의 획득·정산·교환 실행 코드는 아직 이전 버전이다.
+
 - 광고 SDK: https://developers-apps-in-toss.toss.im/documentation/common/monetization/iaa/interstitial-rewarded-ad
 - 프로모션: https://developers-apps-in-toss.toss.im/guide/marketing/promotion
 

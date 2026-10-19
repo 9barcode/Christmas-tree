@@ -45,3 +45,8 @@ dialog .close{width:44px;height:44px;top:4px;right:4px;display:grid;place-items:
 .home button:focus-visible,dialog button:focus-visible{outline:3px solid #fff4c9;outline-offset:3px;box-shadow:0 0 0 5px #654221}
 dialog .close:focus-visible{outline-color:#795832;box-shadow:none}
 
+/* Inline, full viewport width. Never cover the tree, rug or action buttons. */
+.banner-region{width:100%;margin:24px 0 0;background:#fff;min-height:96px}
+.banner-region[hidden]{display:none}
+.banner-target{width:100%;min-height:96px;height:auto}
+

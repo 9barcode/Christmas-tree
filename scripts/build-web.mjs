@@ -8,4 +8,5 @@ if (configuredBase && new URL(configuredBase).protocol !== 'https:') throw Error
 await writeFile(new URL('src/api-base.js',out), 'export const apiBaseUrl = ' + JSON.stringify(configuredBase) + ';\n');
 await build({entryPoints:[new URL('../src/native-file.js',import.meta.url).pathname],outfile:new URL('src/native-file.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});
 await build({entryPoints:[new URL('../src/native-promotions.js',import.meta.url).pathname],outfile:new URL('src/native-promotions.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});
+await build({entryPoints:[new URL('../src/native-banner.js',import.meta.url).pathname],outfile:new URL('src/native-banner.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});
 console.log('Prepared dist/toss (HTML, modules, styles and local assets)');
