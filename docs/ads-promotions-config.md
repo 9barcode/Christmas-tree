@@ -53,7 +53,7 @@ worker/config.js의 promotionConfig(env)는 서버 전용입니다. 운영 모�
 
 앱은 User.getAnonymousKey를 가져와 서버에서 토스 anon-key/verify로 검증한 뒤 tree_sessions 세션을 사용합니다. 서버 날짜는 한국 시간이며 프론트 count/day/amount는 지급 판단에 사용하지 않습니다. 출석 광고 완료 이벤트와 트리별 광고 그룹 ID를 검증한 뒤 서버 미션 출석을 기록합니다. 포도모아와 같은 SDK 완료 이벤트 신고 방식이며 독립적인 광고사업자 서명 영수증 검증 방식은 아닙니다.
 
-원본 GitHub 저장소 Actions Variable TOSS_MTLS_CERTIFICATE_ID에 트리모아용으로 Cloudflare에 등록한 인증서 ID를 지정합니다. 배포 시 TOSS_MTLS 바인딩을 생성합니다. 포도모아의 인증서를 임의로 복사하거나 인증서 비밀키를 저장소에 넣지 않습니다. 값이 없으면 Worker 헬스/공개 설정은 동작하지만 인증·미션 출석·지급은 실행되지 않습니다. 실제 appName이 다르면 Worker Secret TOSS_APP_NAME 또는 ALLOWED_ORIGINS도 맞춥니다.
+원본 GitHub 저장소 Actions Repository Secret TOSS_MTLS_CERTIFICATE_ID에 트리모아용으로 Cloudflare에 등록한 인증서 ID를 지정합니다. 배포 시 TOSS_MTLS 바인딩을 생성합니다. 포도모아의 인증서를 임의로 복사하거나 인증서 비밀키를 저장소에 넣지 않습니다. 값이 없으면 Worker 헬스/공개 설정은 동작하지만 인증·미션 출석·지급은 실행되지 않습니다. 실제 appName이 다르면 Worker Secret TOSS_APP_NAME 또는 ALLOWED_ORIGINS도 맞춥니다.
 
 ### 지급·복구
 
