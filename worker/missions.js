@@ -83,8 +83,9 @@ async function attendance(request,env,user,context) {
   const date=kstDate(), marker=crypto.randomUUID(), previous=yesterday(date);
   // Date and counts are server-derived, never accepted from client local storage.
   const result=await env.DB.batch([
-    env.DB.prepare('INSERT INTO tree_mission_progress(user_id,slot) SELECT ?,? WHERE ? = 1 OR EXISTS(SELECT 1 FROM tree_mission_progress WHERE user_id = ? AND slot = ? AND completed > 0) ON CONFLICT DO NOTHING')
-      .bind(user.id,slot,slot,user.id,slot-1),
+    // Each slot can be started independently; a verified ad is still required above.
+    env.DB.prepare('INSERT INTO tree_mission_progress(user_id,slot) VALUES(?,?) ON CONFLICT DO NOTHING')
+      .bind(user.id,slot),
     env.DB.prepare('UPDATE tree_mission_progress SET completed = CASE WHEN last_date = ? OR last_date IS NULL THEN completed+1 ELSE 1 END,last_date = ?,request_id = ? WHERE user_id = ? AND slot = ? AND completed < 30 AND (last_date IS NULL OR last_date < ?)')
       .bind(previous,date,marker,user.id,slot,date),
     ...[15,30].map(day=>env.DB.prepare('INSERT INTO tree_promotion_missions(user_id,day,amount,earned_at) SELECT user_id,?,?,? FROM tree_mission_progress WHERE user_id = ? AND slot = ? AND request_id = ? AND completed = ? ON CONFLICT(user_id,day) DO NOTHING')
