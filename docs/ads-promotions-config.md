@@ -15,7 +15,7 @@ Cloudflare Dashboard → Workers & Pages → treemoa → Settings → Variables 
 | TOSS_PROMOTION_MODE | Secret 또는 Text | 운영 live, 테스트 test; 생략 시 live |
 | TOSS_PROMOTION_CODE_ATTENDANCE | Secret | 트리 출석 누적 보상 지급 프로모션 코드 |
 
-값은 저장소에 넣지 않습니다. wrangler.jsonc에 빈 vars를 넣어 대시보드 값을 덮어쓰지 않습니다. 반복 배포에서도 유지하려면 위 항목 모두 Worker Secrets로 등록하는 방식을 권장합니다. 로컬에서는 .dev.vars.example을 .dev.vars로 복사해 값을 입력합니다.
+값은 저장소에 넣지 않습니다. wrangler.jsonc에 빈 vars를 넣어 대시보드 값을 덮어쓰지 않습니다. wrangler.jsonc의 keep_vars: true로 대시보드의 일반 Variables를 배포 후에도 유지합니다. 광고 ID·금액·모드·앱 이름은 일반 Variable로 관리할 수 있고, 프로모션 코드는 Worker Secret으로 관리합니다. 같은 이름을 추후 vars에 명시하면 코드 값이 우선하므로 실제 값이나 빈 vars 항목을 코드에 추가하지 않습니다. 이 옵션은 mTLS·D1 같은 바인딩 보존 옵션은 아닙니다. 로컬에서는 .dev.vars.example을 .dev.vars로 복사해 값을 입력합니다.
 
 ## 앱의 설정 조회
 
@@ -44,8 +44,8 @@ worker/config.js의 promotionConfig(env)는 서버 전용입니다. 운영 모�
 | --- | --- |
 | TOSS_PROMOTION_CODE_DAY_15 | 15일 달성 프로모션 코드; Worker Secret |
 | TOSS_PROMOTION_CODE_DAY_30 | 30일 달성 프로모션 코드; Worker Secret |
-| TOSS_PROMOTION_AMOUNT_DAY_15 | 기본 15P, 양의 정수; Worker Secret 권장 |
-| TOSS_PROMOTION_AMOUNT_DAY_30 | 기본 20P, 양의 정수; Worker Secret 권장 |
+| TOSS_PROMOTION_AMOUNT_DAY_15 | 기본 15P, 양의 정수; 일반 Variable |
+| TOSS_PROMOTION_AMOUNT_DAY_30 | 기본 20P, 양의 정수; 일반 Variable |
 
 금액 기본값은 포도모아 15/30일 미션 기준입니다. 콘솔에 설정한 금액·조건과 반드시 맞춥니다. 15일차 출석도장 찍기와 트리에 별 달기 중 어느 캠페인을 각 코드에 연결할지는 운영자가 정합니다. 30일 누적 465P 정산은 미션 20P와 별개이며 ATTENDANCE 지급은 이번 미션 구현에 포함하지 않습니다.
 
@@ -53,7 +53,7 @@ worker/config.js의 promotionConfig(env)는 서버 전용입니다. 운영 모�
 
 앱은 User.getAnonymousKey를 가져와 서버에서 토스 anon-key/verify로 검증한 뒤 tree_sessions 세션을 사용합니다. 서버 날짜는 한국 시간이며 프론트 count/day/amount는 지급 판단에 사용하지 않습니다. 출석 광고 완료 이벤트와 트리별 광고 그룹 ID를 검증한 뒤 서버 미션 출석을 기록합니다. 포도모아와 같은 SDK 완료 이벤트 신고 방식이며 독립적인 광고사업자 서명 영수증 검증 방식은 아닙니다.
 
-원본 GitHub 저장소 Actions Repository Secret TOSS_MTLS_CERTIFICATE_ID에 트리모아용으로 Cloudflare에 등록한 인증서 ID를 지정합니다. 배포 시 TOSS_MTLS 바인딩을 생성합니다. 포도모아의 인증서를 임의로 복사하거나 인증서 비밀키를 저장소에 넣지 않습니다. 값이 없으면 Worker 헬스/공개 설정은 동작하지만 인증·미션 출석·지급은 실행되지 않습니다. 실제 appName이 다르면 Worker Secret TOSS_APP_NAME 또는 ALLOWED_ORIGINS도 맞춥니다.
+원본 GitHub 저장소 Actions Repository Secret TOSS_MTLS_CERTIFICATE_ID에 트리모아용으로 Cloudflare에 등록한 인증서 ID를 지정합니다. 배포 시 TOSS_MTLS 바인딩을 생성합니다. 포도모아의 인증서를 임의로 복사하거나 인증서 비밀키를 저장소에 넣지 않습니다. 값이 없으면 Worker 헬스/공개 설정은 동작하지만 인증·미션 출석·지급은 실행되지 않습니다. 실제 appName이 다르면 Worker Variable TOSS_APP_NAME 또는 ALLOWED_ORIGINS도 맞춥니다.
 
 ### 지급·복구
 
