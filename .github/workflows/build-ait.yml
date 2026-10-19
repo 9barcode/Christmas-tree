@@ -31,6 +31,7 @@ jobs:
       - name: Build production AIT
         run: npm run build:toss
         env:
+          TREE_API_BASE_URL: ${{ vars.TREE_API_BASE_URL }}
           NODE_ENV: production
           TOSS_APP_NAME: ${{ inputs.app_name || 'christmas-tree-decorating' }}
       - uses: actions/upload-artifact@v4

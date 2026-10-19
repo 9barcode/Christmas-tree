@@ -1,3 +1,6 @@
+import {loadServiceConfig} from './service-config.js';
+// Ad adapters can request current Worker settings without rebuilding the AIT.
+window.treeServiceConfig = {load: loadServiceConfig};
 import {DOT_INTERVAL_MS,loadingText,waitForHomeReady} from './loading-state.js';
 const splash=document.querySelector('.loading-screen');
 const copy=document.querySelector('.loading-copy');
