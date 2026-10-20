@@ -2,13 +2,9 @@ const value = input => typeof input === 'string' ? input.trim() : '';
 export function publicAdConfig(env) {
   return {
     interstitialAdGroupId: value(env.INTERSTITIAL_AD_GROUP_ID),
-    bannerAdGroupId: value(env.BANNER_AD_GROUP_ID),
-    loadingListAdGroupId: value(env.LOADING_LIST_AD_GROUP_ID),
-    loadingImageAdGroupId: value(env.LOADING_IMAGE_AD_GROUP_ID),
-    rewardedAdGroupIds: Object.fromEntries(Array.from({length: 5}, (_, index) => {
-      const treeId = index + 1;
-      return [treeId, value(env['REWARDED_AD_GROUP_ID_' + treeId])];
-    })),
+    bannerTextAdGroupId: value(env.BANNER_TEXT_AD_GROUP_ID),
+    bannerImageAdGroupId: value(env.BANNER_IMAGE_AD_GROUP_ID),
+    rewardedAdGroupId: value(env.REWARDED_AD_GROUP_ID),
   };
 }
 // Server-only: never return promotion codes through public configuration APIs.

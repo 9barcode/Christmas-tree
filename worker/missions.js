@@ -78,7 +78,7 @@ async function missionView(env,user) {
 async function attendance(request,env,user,context) {
   const body=await bodyOf(request), slot=body.treeId;
   if(!Number.isInteger(slot)||slot<1||slot>5)throw Error('invalid_tree');
-  const adId=String(env['REWARDED_AD_GROUP_ID_'+slot]||'').trim();
+  const adId=String(env.REWARDED_AD_GROUP_ID||'').trim();
   if(!adId||body.adGroupId!==adId||body.eventType!=='userEarnedReward')throw Error('reward_not_recognized');
   const date=kstDate(), marker=crypto.randomUUID(), previous=yesterday(date);
   // Date and counts are server-derived, never accepted from client local storage.

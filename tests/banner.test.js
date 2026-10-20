@@ -4,7 +4,7 @@ import {createBanner} from '../src/banner.js';
 import {publicAdConfig} from '../worker/config.js';
 import {readFileSync} from 'node:fs';
 
-function fixture({sdk,configKey='bannerAdGroupId',ads={bannerAdGroupId:'banner'},loadSdk}={}){
+function fixture({sdk,configKey='bannerTextAdGroupId',ads={bannerTextAdGroupId:'banner'},loadSdk}={}){
  const region={hidden:true,isConnected:true},target={replaceChildren(){}};
  return {region,target,banner:createBanner({region,target,configKey,loadConfig:async()=>({ads}),loadSdk:loadSdk||(async()=>sdk)})};
 }
@@ -35,8 +35,8 @@ test('leaving during SDK initialization cannot attach a late banner',async()=>{
 });
 test('loading list and image slots share SDK initialization but use their own IDs',async()=>{
  const ids=[];const {sdk,calls}=fakeSdk((cb,id)=>{ids.push(id);cb.onAdRendered()});
- const ads={loadingListAdGroupId:'text-id',loadingImageAdGroupId:'image-id'};
- const list=fixture({sdk,ads,configKey:'loadingListAdGroupId'}),image=fixture({sdk,ads,configKey:'loadingImageAdGroupId'});
+ const ads={bannerTextAdGroupId:'text-id',bannerImageAdGroupId:'image-id'};
+ const list=fixture({sdk,ads,configKey:'bannerTextAdGroupId'}),image=fixture({sdk,ads,configKey:'bannerImageAdGroupId'});
  await Promise.all([list.banner.start(),image.banner.start()]);assert.deepEqual(ids,['text-id','image-id']);assert.equal(calls.init,1);
  list.banner.stop();image.banner.stop();assert.equal(calls.destroy,2);
 });
@@ -45,8 +45,8 @@ test('config failures do not block or expose an empty advertisement',async()=>{
  await banner.start();assert.equal(region.hidden,true);
 });
 test('public config exposes only banner IDs, not promotion credentials',()=>{
- const c=publicAdConfig({BANNER_AD_GROUP_ID:' home ',LOADING_LIST_AD_GROUP_ID:' list ',LOADING_IMAGE_AD_GROUP_ID:' image ',TOSS_PROMOTION_CODE_DAY_15:'private'});
- assert.equal(c.bannerAdGroupId,'home');assert.equal(c.loadingListAdGroupId,'list');assert.equal(c.loadingImageAdGroupId,'image');assert.equal(JSON.stringify(c).includes('private'),false);
+ const c=publicAdConfig({BANNER_TEXT_AD_GROUP_ID:' text ',BANNER_IMAGE_AD_GROUP_ID:' image ',TOSS_PROMOTION_CODE_DAY_15:'private'});
+ assert.equal(c.bannerTextAdGroupId,'text');assert.equal(c.bannerImageAdGroupId,'image');assert.equal(JSON.stringify(c).includes('private'),false);
 });
 test('advertising never belongs to the photographed scene',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),home=html.slice(html.indexOf('<main '),html.indexOf('</main>'));

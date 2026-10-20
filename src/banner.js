@@ -12,7 +12,7 @@ function initialize(sdk){
 }
 
 // One inline SDK-owned slot: no refresh timers, rewards, or fake ad markup.
-export function createBanner({region,target,configKey='bannerAdGroupId',loadConfig=loadServiceConfig,loadSdk=()=>import('./native-banner.js').then(m=>m.TossAds)}){
+export function createBanner({region,target,configKey='bannerTextAdGroupId',loadConfig=loadServiceConfig,loadSdk=()=>import('./native-banner.js').then(m=>m.TossAds)}){
  let generation=0,attached=null,timer=null;
  const destroy=slot=>{try{slot?.destroy()}catch{/* Optional advertising must not interrupt the home. */}};
  function stop(){generation++;clearTimeout(timer);timer=null;const old=attached;attached=null;destroy(old);region.hidden=true;target.replaceChildren()}
@@ -42,8 +42,8 @@ export function createBanner({region,target,configKey='bannerAdGroupId',loadConf
 export function startLoadingBanners(){
  if(new URLSearchParams(location.search).get('preview')==='1')return ()=>{};
  // Never show the same placement twice if console IDs were accidentally duplicated.
- const loadConfig=async()=>{const {ads}=await loadServiceConfig();return {ads:{...ads,loadingImageAdGroupId:ads.loadingImageAdGroupId===ads.loadingListAdGroupId?'':ads.loadingImageAdGroupId}}};
- const banners=['loadingListAdGroupId','loadingImageAdGroupId'].map(configKey=>{
+ const loadConfig=async()=>{const {ads}=await loadServiceConfig();return {ads:{...ads,bannerImageAdGroupId:ads.bannerImageAdGroupId===ads.bannerTextAdGroupId?'':ads.bannerImageAdGroupId}}};
+ const banners=['bannerTextAdGroupId','bannerImageAdGroupId'].map(configKey=>{
   const region=document.querySelector(`[data-banner="${configKey}"]`);return region?createBanner({region,target:region.querySelector('.banner-target'),configKey,loadConfig}):null;
  }).filter(Boolean);
  const stop=()=>{window.removeEventListener('pagehide',stop);banners.forEach(b=>b.stop())};
@@ -53,7 +53,7 @@ export function startLoadingBanners(){
 
 export function startHomeBanner(){
  if(new URLSearchParams(location.search).get('preview')==='1')return;
- const region=document.querySelector('.banner-region'),target=document.querySelector('.banner-target');
+ const region=document.querySelector('body > .banner-region'),target=region?.querySelector('.banner-target');
  if(!region||!target)return;
  const banner=createBanner({region,target});
  const start=()=>{banner.start().catch(()=>banner.stop())};

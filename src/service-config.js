@@ -7,15 +7,12 @@ export function loadServiceConfig() {
     });
     if (!response.ok) throw Error('광고 설정을 불러오지 못했어요.');
     const config = await response.json();
-    if (typeof config?.ads?.bannerAdGroupId !== 'string' ||
-        ![1,2,3,4,5].every(treeId => typeof config?.ads?.rewardedAdGroupIds?.[treeId] === 'string')) throw Error('광고 설정을 확인해 주세요.');
+    if (!config?.ads||typeof config.ads!=='object'||Array.isArray(config.ads)) throw Error('광고 설정을 확인해 주세요.');
     return Object.freeze({ ads: Object.freeze({
       interstitialAdGroupId: typeof config.ads.interstitialAdGroupId==='string'?config.ads.interstitialAdGroupId.trim():'',
-      bannerAdGroupId: config.ads.bannerAdGroupId.trim(),
-      loadingListAdGroupId: typeof config.ads.loadingListAdGroupId==='string'?config.ads.loadingListAdGroupId.trim():'',
-      loadingImageAdGroupId: typeof config.ads.loadingImageAdGroupId==='string'?config.ads.loadingImageAdGroupId.trim():'',
-      rewardedAdGroupIds: Object.freeze(Object.fromEntries([1,2,3,4,5].map(treeId =>
-        [treeId, config.ads.rewardedAdGroupIds[treeId].trim()]))),
+      bannerTextAdGroupId: typeof config.ads.bannerTextAdGroupId==='string'?config.ads.bannerTextAdGroupId.trim():'',
+      bannerImageAdGroupId: typeof config.ads.bannerImageAdGroupId==='string'?config.ads.bannerImageAdGroupId.trim():'',
+      rewardedAdGroupId: typeof config.ads.rewardedAdGroupId==='string'?config.ads.rewardedAdGroupId.trim():'',
     }) });
   })().catch(error => { pending = undefined; throw error; });
   return pending;

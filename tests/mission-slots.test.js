@@ -11,17 +11,17 @@ test('server accepts independent slots while preserving ad, authentication and d
  sql.prepare('INSERT INTO tree_users(id,toss_user_key) VALUES(?,?)').run('user','anon:test');
  sql.prepare('INSERT INTO tree_sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(hash,'user','2099-01-01T00:00:00Z');
  const DB={prepare(query){let values=[];return {bind(...v){values=v;return this},async first(){return sql.prepare(query).get(...values)??null},async all(){return {results:sql.prepare(query).all(...values)}},async run(){const result=sql.prepare(query).run(...values);return {meta:{changes:Number(result.changes)}}}}},async batch(statements){sql.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sql.exec('COMMIT');return results}catch(error){sql.exec('ROLLBACK');throw error}}};
- const env={DB,REWARDED_AD_GROUP_ID_5:'ad-5',REWARDED_AD_GROUP_ID_2:'ad-2'};
+ const env={DB,REWARDED_AD_GROUP_ID:'shared-reward'};
  const send=(body,auth=true)=>handleMissions(new Request('https://test/api/attendance',{method:'POST',headers:{'content-type':'application/json',...(auth?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)}),env);
  try{
-  const body={treeId:5,adGroupId:'ad-5',eventType:'userEarnedReward'};
+  const body={treeId:5,adGroupId:'shared-reward',eventType:'userEarnedReward'};
   assert.equal((await send(body,false)).status,401);
   assert.equal((await send({...body,adGroupId:'wrong'})).status,503);
   assert.equal(sql.prepare('SELECT count(*) AS n FROM tree_mission_progress').get().n,0);
   const first=await send(body);assert.equal(first.status,200);assert.equal((await first.json()).progress.completed,1);
   const again=await send(body);assert.equal((await again.json()).progress.completed,1);
   assert.equal(sql.prepare('SELECT count(*) AS n FROM tree_mission_progress WHERE slot < 5').get().n,0);
-  const second=await send({treeId:2,adGroupId:'ad-2',eventType:'userEarnedReward'});assert.equal(second.status,200);assert.equal((await second.json()).progress.completed,1);
+  const second=await send({treeId:2,adGroupId:'shared-reward',eventType:'userEarnedReward'});assert.equal(second.status,200);assert.equal((await second.json()).progress.completed,1);
   assert.equal((await send({...body,treeId:6})).status,400);
  }finally{sql.close()}
 });
