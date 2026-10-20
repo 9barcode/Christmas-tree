@@ -4,12 +4,12 @@ import {advanceMissionPayment} from './mission-payments.js';
 const sha256=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),byte=>byte.toString(16).padStart(2,'0')).join('');
 const kstDate=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const yesterday=date=>new Date(Date.parse(date+'T00:00:00Z')-86400000).toISOString().slice(0,10);
-async function bodyOf(request) {
+export async function bodyOf(request) {
   const text=await request.text();
   if(text.length>4096)throw Error('invalid_request');
   try{return JSON.parse(text)}catch{throw Error('invalid_request')}
 }
-function headers(request,env) {
+export function headers(request,env) {
   const result={'Cache-Control':'no-store','Vary':'Origin'};
   const app=(env.TOSS_APP_NAME||'christmas-tree-decorating').trim();
   const allowed=new Set(['http://localhost:4173',...['apps','private-apps','web','private-web'].map(kind=>'https://'+app+'.'+kind+'.tossmini.com'),
@@ -19,7 +19,7 @@ function headers(request,env) {
   if(origin)Object.assign(result,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'content-type, authorization'});
   return result;
 }
-async function currentUser(request,env) {
+export async function currentUser(request,env) {
   const token=request.headers.get('Authorization')?.match(/^Bearer ([a-f0-9]{64})$/i)?.[1];
   if(!token)return null;
   return env.DB.prepare('SELECT u.id,u.toss_user_key FROM tree_sessions s JOIN tree_users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?')
