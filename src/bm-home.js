@@ -25,12 +25,14 @@ let state,busy=false,renderId=0,toastTimer,recovering=false;
 function apply(value){
  if(value?.version!==2||!Array.isArray(value.slots)||!value.slots.some(t=>t.slot===1)||value.dailyLimitPerTree!==10)throw Error('트리 서버 정보를 확인해 주세요.');
  snapshot=value;
+ const paidSlots=new Set((value.credits||[]).filter(row=>row.paid_at).map(row=>row.slot));
  const trees=Array(5).fill(null);
  for(const row of value.slots){
   if(!Number.isInteger(row.slot)||row.slot<1||row.slot>5||!COLORS.includes(row.color)||!Number.isInteger(row.decorations)||row.decorations<0||row.decorations>30)throw Error('트리 정보를 확인해 주세요.');
+  if(paidSlots.has(row.slot))continue;
   trees[row.slot-1]={...row,count:row.decorations,positions:sanitizePositions(row.positions,sequence,row.decorations)};
  }
- if(!trees[selected])selected=0;
+ if(!trees[selected]){const active=trees.findIndex(Boolean);if(active>=0)selected=active;else if(paidSlots.has(selected+1)){const open=trees.findIndex((t,index)=>!t&&!paidSlots.has(index+1)&&!value.slots.some(row=>row.slot===index+1));selected=open>=0?open:0;}}
  state={selected,trees};
 }
 apply(snapshot);
@@ -42,6 +44,7 @@ function showToast(message){$('.toast').textContent=message;$('.toast').hidden=f
 function select(index){selected=index;state.selected=index;try{localStorage.setItem(SELECTED_KEY,String(index));}catch{/* Not authoritative. */}}
 function updateCTA(){
  const tree=current(),button=$('.checkin');
+ if(!tree){button.disabled=true;button.lastChild.textContent=busy?'처리 중이에요…':'빈 슬롯을 눌러 광고로 트리 추가';button.classList.remove('gift-cta');return;}
  let label='전면광고 보고 장식 받기',disabled=false;
  if(tree.count<30&&tree.dailyUsed>=10){label='오늘 장식 10개를 모두 모았어요';disabled=true;}
  if(tree.count===30){
@@ -80,16 +83,18 @@ async function assetNode(path,className){const node=document.createElement('div'
 async function render(){
  const id=++renderId,tree=current();
  $('.slots').replaceChildren(...Array.from({length:5},(_,index)=>{
-  const t=state.trees[index],b=document.createElement('button');
-  b.className='slot'+(index===selected?' selected':'')+(!t?' is-locked':'');b.disabled=busy;
-  b.setAttribute('aria-pressed',String(index===selected));b.setAttribute('aria-label',`${index+1}번 트리${t?`, 장식 ${t.count}/30`:', 리워드 광고로 추가'}`);
-  b.innerHTML=t?`<img src="assets/trees/tree-${t.color}.png" alt=""><span>${index+1}</span>`:'<span class="lock" aria-hidden="true">🔒</span><span>'+String(index+1)+'</span>';
+  const t=state.trees[index],b=document.createElement('button'),exchanged=!t&&!!credit(index+1)?.paid_at;
+  b.className='slot'+(index===selected?' selected':'')+(!t?(exchanged?' is-exchanged':' is-locked'):'');b.disabled=busy||exchanged;
+  b.setAttribute('aria-pressed',String(index===selected));b.setAttribute('aria-label',t?`${index+1}번 트리, 장식 ${t.count}/30`:exchanged?`${index+1}번 트리 · 포인트 교환 완료`:`${index+1}번 트리, 리워드 광고로 추가`);
+  b.innerHTML=t?`<img src="assets/trees/tree-${t.color}.png" alt=""><span>${index+1}</span>`:exchanged?'<span class="lock" aria-hidden="true">✓</span><span>'+String(index+1)+'</span>':'<span class="lock" aria-hidden="true">🔒</span><span>'+String(index+1)+'</span>';
   b.onclick=()=>{
    if(busy||recovering)return;
+   if(exchanged)return;
    if(!t){showUnlock(index);return;}
    select(index);render().catch(error=>showToast(error.message));
   };return b;
  }));
+ if(!tree){$('.progress').textContent='빈 슬롯을 눌러 광고를 보고 새 트리를 만들어요';updateCTA();$('.tree')?.remove();$('.pot')?.remove();$('.pot-back')?.remove();$('.ornaments').replaceChildren();$('.floor').replaceChildren();return;}
  $('.progress').textContent=`${tree.slot}번 트리 · 장식 ${tree.count}/30 · 오늘 ${tree.dailyUsed}/10`;
  updateCTA();
  const [trunk,pot,potBack]=await Promise.all([assetNode(`assets/trees/tree-${tree.color}.png`,'tree'),assetNode('assets/planters/planter-wood.png','pot'),assetNode('assets/planters/planter-wood.png','pot-back')]);
@@ -178,12 +183,12 @@ function exchange(slot){return run(async()=>{
   if(!existing||existing.state==='failed')await performAd('exchange-points',slot);
   apply(await recoverExchanges());await render();
   const latest=snapshot.payments.find(p=>p.slot===slot);
-  showToast(credit(slot)?.paid_at?'30P 교환이 완료됐어요.':payment(slot)?.state==='succeeded'?'테스트 교환을 확인했어요. 실제 포인트 지급은 없어요.':latest?.state==='failed'?'교환이 완료되지 않았어요. 모은 포인트는 보관돼요. 잠시 후 다시 시도해 주세요.':'교환 결과를 확인 중이에요. 다시 광고를 볼 필요는 없어요.');
+  showToast(credit(slot)?.paid_at?'30P 교환이 완료됐어요. 새 트리는 리워드 광고로 추가할 수 있어요.':payment(slot)?.state==='succeeded'?'테스트 교환을 확인했어요. 실제 포인트 지급은 없어요.':latest?.state==='failed'?'교환이 완료되지 않았어요. 모은 포인트는 보관돼요. 잠시 후 다시 시도해 주세요.':'교환 결과를 확인 중이에요. 다시 광고를 볼 필요는 없어요.');
  }
  $('dialog').close();
  });}
 $('.checkin').onclick=()=>{
- if(busy||recovering)return;const t=current();
+ if(busy||recovering)return;const t=current();if(!t){showToast('빈 슬롯을 눌러 리워드 광고로 트리를 추가해 주세요.');return;}
  if(t.completed_at){if(credit(t.slot)?.paid_at){showShare();return;}return exchange(t.slot);}
  run(async()=>{
   if(t.count===30){
