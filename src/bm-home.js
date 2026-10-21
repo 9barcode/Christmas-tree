@@ -174,6 +174,7 @@ function showRewards(){
   if(t.completed_at&&!c?.paid_at)row.append(actionButton(pending(t.slot)?'교환 결과 확인':'리워드 광고 보고 30P 교환',()=>exchange(t.slot)));
   content.append(row);
  }
+ for(const c of snapshot.credits.filter(item=>item.paid_at))content.append(paragraph(`${c.slot}번 트리 · 30P 교환 완료`));
  content.append(actionButton('닫기',()=>$('dialog').close()));openModal('장식 · 포인트 내역',content);
 }
 function exchange(slot){return run(async()=>{
