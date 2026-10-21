@@ -1,6 +1,6 @@
 import {apiBaseUrl} from './api-base.js';
 let session, starting;
-async function request(path,body,authenticated=true) {
+export async function request(path,body,authenticated=true) {
   if(authenticated)await ensureMissionSession();
   const response=await fetch(apiBaseUrl.replace(/\/$/,'')+path,{
     method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(authenticated?{authorization:'Bearer '+session.token}:{})},
@@ -8,7 +8,7 @@ async function request(path,body,authenticated=true) {
   });
   const payload=await response.json();
   if(response.status===401&&authenticated)session=undefined;
-  if(!response.ok)throw Error(payload.message||'프로모션 서버 연결을 확인해 주세요.');
+  if(!response.ok){const error=Error(payload.message||'서버 연결을 확인해 주세요.');error.code=payload.error;error.status=response.status;throw error;}
   return payload;
 }
 export async function ensureMissionSession(){
