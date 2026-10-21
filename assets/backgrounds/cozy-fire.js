@@ -15,7 +15,7 @@ export async function startCozyFire(canvas,image){
   const logEdge=px<76?151-px*.58:107+(px-76)*.3;
   const warm=smooth(25,80,r-g)*smooth(24,85,g)* (1-smooth(.65,.95,b/Math.max(g,1)));
   const flame=warm*smooth(18,55,py)*(1-smooth(logEdge-12,logEdge,py))*(1-smooth(132,165,px));
-  const ember=warm*smooth(165,180,py)*(1-smooth(187,198,py))*.22;
+  const ember=warm*smooth(165,180,py)*(1-smooth(187,198,py))*.42;
   pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=255;pixels.data[i+3]=Math.round(Math.max(flame,ember)*255);
  }
  mc.putImageData(pixels,0,0);
@@ -27,11 +27,11 @@ export async function startCozyFire(canvas,image){
   // Narrow columns travel upwards independently; several incommensurate waves
   // avoid a synchronized breathing loop. Roots stay anchored at the coals.
   for(let px=0;px<w;px+=2){
-   const wave=Math.sin(time*3.7+px*.087)*.55+Math.sin(time*6.13-px*.12)*.3+Math.sin(time*1.79+px*.19)*.15;
-   const lift=wave*4.2,sway=Math.sin(time*4.3+px*.06)*.8;
-   ctx.drawImage(source,px,0,2,160,px+sway,lift,2,160-lift);
+   const wave=Math.sin(time*4.8+px*.087)*.55+Math.sin(time*8.13-px*.12)*.3+Math.sin(time*2.39+px*.19)*.15;
+   const lift=wave*11,sway=Math.sin(time*5.1+px*.06)*2.2;
+   ctx.drawImage(source,Math.max(0,Math.min(w-2,px+sway)),0,2,160,px,lift,2,160-lift);
   }
-  ctx.globalAlpha=.91+Math.sin(time*5.3)*.035+Math.sin(time*8.17)*.025;
+  ctx.globalAlpha=.8+Math.sin(time*6.3)*.12+Math.sin(time*9.17)*.07;
   ctx.drawImage(source,0,160,w,40,0,160,w,40);ctx.globalAlpha=1;
   ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0);ctx.globalCompositeOperation='source-over';
   raf=requestAnimationFrame(frame);

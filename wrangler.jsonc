@@ -4,16 +4,19 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
-  "mtls_certificates": [
-    { "binding": "TOSS_MTLS", "certificate_id": "01f9a44c-aa13-4296-a12c-abd239616c81" }
-  ],
+  "keep_vars": true,
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "podomoa-db",
       "database_id": "8a232a2e-424c-45cc-a132-eae0e884fcef",
-      "migrations_dir": "migrations/treemoa",
-      "migrations_table": "treemoa_d1_migrations"
+      "migrations_dir": "migrations/tree",
+      "migrations_table": "tree_d1_migrations"
     }
-  ]
+  ],
+  "vars": {
+    "TOSS_PROMOTION_AMOUNT_DAY_15": "50",
+    "TOSS_PROMOTION_AMOUNT_DAY_30": "50",
+    "TOSS_PROMOTION_MODE": "live"
+  }
 }

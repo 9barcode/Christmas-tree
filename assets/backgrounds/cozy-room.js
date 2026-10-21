@@ -15,9 +15,9 @@ export function startCozySnow(canvas) {
     [[789,688],[895,688],[895,814],[797,814]],
     [[916,688],[1017,688],[1016,814],[916,814]],
   ];
-  const flakes = Array.from({length:32},(_,i)=>({
+  const flakes = Array.from({length:44},(_,i)=>({
     x:775+(i*79)%260,y:250+(i*113)%580,
-    radius:1.1+(i%4)*.5,speed:10+(i%5)*3,phase:i*1.7
+    radius:1.4+(i%5)*.55,speed:18+(i%5)*4,phase:i*1.7
   }));
   let raf=0,last=0,elapsed=0,disposed=false;
   function frame(now){
@@ -28,8 +28,8 @@ export function startCozySnow(canvas) {
     ctx.clip();
     for(const f of flakes){
       f.y+=f.speed*dt;if(f.y>825)f.y=245;
-      ctx.beginPath();ctx.arc(f.x+Math.sin(elapsed*.3+f.phase)*7,f.y,f.radius,0,Math.PI*2);
-      ctx.fillStyle='rgba(245,249,255,.65)';ctx.fill();
+      ctx.beginPath();ctx.arc(f.x+Math.sin(elapsed*.4+f.phase)*9,f.y,f.radius,0,Math.PI*2);
+      ctx.fillStyle='rgba(245,249,255,.78)';ctx.fill();
     }
     ctx.restore();raf=requestAnimationFrame(frame);
   }

@@ -16,14 +16,37 @@ button:not(:disabled):active{filter:brightness(.94)}
 @media(max-width:360px){.home footer .checkin{font-size:4.8cqw}.home footer .checkin.gift-cta{font-size:3.3cqw}}
 .slot.selected{background:none;border:6px solid transparent;border-image:url('../assets/ui/painted/button-cream.webp') 85 105 fill / 8px / 0 stretch;outline:1px solid #ebc374;outline-offset:2px}
 
-.stamp-mark > .completion-star{width:42px;height:42px;object-fit:contain}
 
 /* Keep the trunk inside the planter opening, between the rear rim and front wall. */
-.garden .tree{left:12.6%;top:21.85%;width:74.8%;height:47.3%;z-index:1}
-.garden .pot{clip-path:inset(17% 0 0);z-index:4}
-.garden .pot-back{position:absolute;transform:translate(-50%,-50%);clip-path:inset(0 0 83%);z-index:0;pointer-events:none}
+.garden .tree{left:50%;top:48.5%;width:74.8%;height:47.3%;transform:translate(-50%,-50%);z-index:1}
+.garden .pot{z-index:4}
+.garden .pot-back{position:absolute;transform:translate(-50%,-50%);z-index:0;pointer-events:none}
 .pot-back svg{width:100%;height:100%;overflow:visible}
 
 /* Leave the rug free for gifts, the toy car and the bear. */
 .home footer{top:137cqw;bottom:auto}
 .home > .home-links{top:154cqw}
+
+/* Keep depth-sorted scenery below the header and action buttons. */
+.home .garden{z-index:1}
+
+.slot-preview{position:absolute;inset:.4cqw;overflow:hidden;pointer-events:none}
+.slot-preview > svg{display:block;width:100%;height:100%}
+.slots .slot.is-empty{background:#49311d80;border-style:dashed;box-shadow:none}
+
+.stamp-cell.is-stamp-pending .rudolph-stamp{opacity:0}
+.stamp-cell.is-stamping .rudolph-stamp{animation:attendance-stamp .72s cubic-bezier(.2,.75,.25,1) both}
+@keyframes attendance-stamp{0%{opacity:0;transform:translateY(-18px) scale(1.65) rotate(-16deg)}48%{opacity:1;transform:translateY(2px) scale(.9) rotate(-6deg)}68%{transform:translateY(-2px) scale(1.08) rotate(-6deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(-6deg)}}
+@media(prefers-reduced-motion:reduce){.stamp-cell.is-stamping .rudolph-stamp{animation:none;opacity:1}}
+
+/* Preserve painted controls while keeping small-screen targets usable. */
+.slots .slot{width:max(44px,10.5cqw);height:max(44px,10.5cqw);flex:0 0 auto}
+dialog .close{width:44px;height:44px;top:4px;right:4px;display:grid;place-items:center}
+.home button:focus-visible,dialog button:focus-visible{outline:3px solid #fff4c9;outline-offset:3px;box-shadow:0 0 0 5px #654221}
+dialog .close:focus-visible{outline-color:#795832;box-shadow:none}
+
+/* Inline, full viewport width. Never cover the tree, rug or action buttons. */
+.banner-region{width:100%;margin:24px 0 0;background:#fff;min-height:96px}
+.banner-region[hidden]{display:none}
+.banner-target{width:100%;min-height:96px;height:auto}
+

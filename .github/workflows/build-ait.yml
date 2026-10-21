@@ -1,17 +1,16 @@
 name: Build Release AIT
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-ait.yml'
   workflow_dispatch:
     inputs:
       app_name:
         description: '앱인토스 콘솔에 등록한 앱 이름(appName)'
         required: true
         default: christmas-tree-decorating
-        type: string
-      rewarded_ad_group_id:
-        description: '트리모아 앱의 보상형 광고 그룹 ID'
-        required: false
-        default: ''
         type: string
 
 permissions:
@@ -29,13 +28,12 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm test
       - name: Build production AIT
         run: npm run build:toss
         env:
+          TREE_API_BASE_URL: ${{ vars.TREE_API_BASE_URL }}
           NODE_ENV: production
-          TOSS_APP_NAME: ${{ inputs.app_name }}
-          REWARDED_AD_GROUP_ID: ${{ inputs.rewarded_ad_group_id }}
+          TOSS_APP_NAME: ${{ inputs.app_name || 'christmas-tree-decorating' }}
       - uses: actions/upload-artifact@v4
         with:
           name: christmas-tree-release-ait-${{ github.sha }}

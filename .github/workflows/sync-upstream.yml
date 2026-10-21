@@ -1,0 +1,70 @@
+name: 원본 저장소 가져오기
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: manual-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  upstream-pr:
+    if: github.repository == 'bluehawhy/Christmas-tree'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # No checkout: upstream code is never executed with this token.
+      - name: 원본 main을 가져오는 PR 생성
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const upstreamOwner = '9barcode';
+            const upstreamRepo = 'Christmas-tree';
+            const base = 'main';
+            const head = upstreamOwner + ':main';
+            const title = '원본 저장소 가져오기';
+            const summary = core.summary;
+            const { data: prs } = await github.rest.pulls.list({
+              owner, repo, state: 'open', base, head
+            });
+            if (prs.length) {
+              await summary.addHeading(title)
+                .addRaw('기존 PR: ' + prs[0].html_url + '\n')
+                .addRaw('원본 main의 새 커밋은 기존 PR에 자동 반영됩니다. PR에서 충돌 여부를 확인하세요.')
+                .write();
+              return;
+            }
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner, repo, basehead: base + '...' + head
+            });
+            if (comparison.ahead_by === 0) {
+              await summary.addHeading(title)
+                .addRaw('가져올 원본 main 변경 사항이 없습니다.').write();
+              return;
+            }
+            const { data: pr } = await github.rest.pulls.create({
+              owner, repo, base, head,
+              head_repo: upstreamOwner + '/' + upstreamRepo,
+              title,
+              body: [
+                '## 원본 저장소 가져오기',
+                '',
+                '- 원본: https://github.com/' + upstreamOwner + '/' + upstreamRepo + '/tree/main',
+                '- 반영 대상: ' + owner + '/' + repo + '의 main',
+                '- 원본에서 가져올 커밋: ' + comparison.ahead_by + '개',
+                '',
+                'GitHub의 병합 가능 여부에서 충돌을 확인한 뒤 수동으로 병합하세요.',
+                '자동 병합, 테스트, 빌드 및 배포는 이 워크플로에서 실행하지 않습니다.',
+                '이 PR은 원본 main을 직접 참조하므로 원본의 새 커밋도 자동 반영됩니다.'
+              ].join('\n'),
+              maintainer_can_modify: false
+            });
+            await summary.addHeading(title)
+              .addRaw('생성한 PR: ' + pr.html_url + '\n')
+              .addRaw('충돌 여부는 PR의 병합 가능 상태에서 확인하세요. 자동 병합은 하지 않습니다.')
+              .write();
