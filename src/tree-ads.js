@@ -10,3 +10,12 @@ export async function showTreeRewarded(treeId, options = {}) {
   const result = await show({...options, treeId, adGroupId});
   return {...result, adGroupId, eventType: result?.rewarded === true ? 'userEarnedReward' : 'dismissed'};
 }
+
+export async function showTreeInterstitial(options = {}) {
+  const {ads} = await loadServiceConfig();
+  const adGroupId = ads.interstitialAdGroupId;
+  if (!adGroupId) throw Error('전면 광고 설정이 필요해요.');
+  const show = window.treeAds?.showInterstitial?.bind(window.treeAds) || (await import('./native-promotions.js')).showNativeInterstitial;
+  const result = await show({...options, adGroupId});
+  return {...result, adGroupId, eventType: result?.dismissed === true ? 'dismissed' : 'not_completed'};
+}
