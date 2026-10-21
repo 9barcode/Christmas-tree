@@ -10,11 +10,11 @@ export function showNativeRewarded({adGroupId}) {
   if(!loadFullScreenAd.isSupported()||!showFullScreenAd.isSupported())return Promise.reject(Error('토스 앱에서 광고를 시청해 주세요.'));
   active=true;
   return new Promise((resolve,reject)=>{
-    let ended=false,earned=false,loaded=false,stopLoad=()=>{},stopShow=()=>{};
+    let ended=false,earned=false,displayed=false,dismissed=false,loaded=false,stopLoad=()=>{},stopShow=()=>{};
     let timer=setTimeout(()=>finish(Error('광고 준비 시간이 초과됐어요.')),30000);
     function finish(error){
       if(ended)return;ended=true;clearTimeout(timer);stopLoad();stopShow();active=false;
-      if(error)reject(error);else resolve({rewarded:earned,adGroupId,eventType:earned?'userEarnedReward':'dismissed'});
+      if(error)reject(error);else resolve({rewarded:earned,displayed,dismissed,adGroupId,eventType:earned?'userEarnedReward':'dismissed'});
     }
     const fail=()=>finish(Error('광고를 불러오지 못했어요.'));
     try{
@@ -25,10 +25,41 @@ export function showNativeRewarded({adGroupId}) {
         try{
           stopShow=showFullScreenAd({options:{adGroupId},onError:fail,onEvent:event=>{
             if(ended)return;
-            if(['show','impression'].includes(event.type))clearTimeout(timer);
+            if(['show','impression'].includes(event.type)){displayed=true;clearTimeout(timer);}
             if(event.type==='userEarnedReward'){
               earned=true;clearTimeout(timer);timer=setTimeout(()=>finish(),15000);
-            }else if(event.type==='dismissed')finish();
+            }else if(event.type==='dismissed'){dismissed=true;finish();}
+            else if(event.type==='failedToShow')fail();
+          }});
+          if(ended)stopShow();
+        }catch{fail()}
+      }});
+      if(ended||loaded)stopLoad();
+    }catch{fail()}
+  });
+}
+
+export function showNativeInterstitial({adGroupId}) {
+  if(active)return Promise.reject(Error('광고가 이미 진행 중이에요.'));
+  if(!loadFullScreenAd.isSupported()||!showFullScreenAd.isSupported())return Promise.reject(Error('토스 앱에서 광고를 시청해 주세요.'));
+  active=true;
+  return new Promise((resolve,reject)=>{
+    let ended=false,displayed=false,loaded=false,stopLoad=()=>{},stopShow=()=>{};
+    const timer=setTimeout(()=>finish(Error('광고 준비 시간이 초과됐어요.')),30000);
+    function finish(error){
+      if(ended)return;ended=true;clearTimeout(timer);stopLoad();stopShow();active=false;
+      if(error)reject(error);else resolve({displayed,dismissed:true,adGroupId,eventType:'dismissed'});
+    }
+    const fail=()=>finish(Error('광고를 불러오지 못했어요.'));
+    try{
+      stopLoad=loadFullScreenAd({options:{adGroupId},onError:fail,onEvent:event=>{
+        if(ended||loaded||event.type!=='loaded')return;
+        loaded=true;stopLoad();
+        try{
+          stopShow=showFullScreenAd({options:{adGroupId},onError:fail,onEvent:event=>{
+            if(ended)return;
+            if(event.type==='show'||event.type==='impression')displayed=true;
+            else if(event.type==='dismissed')finish();
             else if(event.type==='failedToShow')fail();
           }});
           if(ended)stopShow();
