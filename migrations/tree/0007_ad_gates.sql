@@ -2,7 +2,7 @@
 CREATE TABLE tree_factory_ad_gates (
  id TEXT PRIMARY KEY,
  user_id TEXT NOT NULL REFERENCES tree_users(id),
- purpose TEXT NOT NULL CHECK(purpose IN ('sell','exchange')),
+ purpose TEXT NOT NULL CHECK(purpose IN ('sell','tree-sale','exchange')),
  item_id TEXT,
  date TEXT NOT NULL,
  ad_group_id TEXT NOT NULL,
