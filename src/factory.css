@@ -52,3 +52,12 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 
 /* Preview debug control stays visible at the bottom, above the tab bar. */
 .debug-ad-panel{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom) + 8px);transform:translateX(-50%);z-index:62;width:min(92vw,500px);padding:10px 12px;background:#fff0cc;border:2px dashed #d3543c;border-radius:16px;text-align:center;color:#63331f;box-shadow:0 3px 10px #21140c77}.debug-ad-panel p{margin:0 0 7px;font-size:12px;line-height:1.35}.debug-ad-button{width:100%;border:1px solid #9d3025;border-radius:12px;padding:9px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;font:inherit;font-size:15px}.debug-ad-button[aria-pressed=true]{background:linear-gradient(#477d4a,#286545);border-color:#33613e}
+
+/* Temporary Toss debug entry and draggable local test dialog. */
+.debug-launch-button{position:fixed;right:12px;bottom:calc(88px + env(safe-area-inset-bottom) + 10px);z-index:100;width:auto;min-width:72px;margin:0;padding:9px 14px;border:2px solid #a62f22;border-radius:999px;background:linear-gradient(#df5537,#b73324);color:#fff8e6;font:inherit;font-size:14px;box-shadow:0 3px 10px #21140c88}
+.debug-dialog[open]{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,380px);max-width:none;max-height:80dvh;margin:0;padding:24px 18px 18px;border:2px solid #d6a25e;border-radius:22px;background:linear-gradient(125deg,#fff0cc,#ebc58e);color:#4a2c17;box-shadow:0 10px 35px #160c09aa;overflow:auto}
+.debug-dialog::backdrop{background:#170d09aa}
+.debug-dialog #modal-title{margin:0 0 14px;padding:4px 24px 10px;border-bottom:1px solid #c79b61;text-align:center;user-select:none}
+.debug-menu-content p{font-size:15px;line-height:1.5;margin:0 0 12px;text-align:center}
+.debug-dialog .debug-ad-button{width:100%;border:1px solid #9d3025;border-radius:14px;padding:12px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;font:inherit;font-size:17px}
+.debug-dialog .debug-ad-button[aria-pressed=true]{background:linear-gradient(#477d4a,#286545);border-color:#33613e}
