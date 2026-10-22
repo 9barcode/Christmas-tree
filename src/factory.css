@@ -61,3 +61,5 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .debug-menu-content p{font-size:15px;line-height:1.5;margin:0 0 12px;text-align:center}
 .debug-dialog .debug-ad-button{width:100%;border:1px solid #9d3025;border-radius:14px;padding:12px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;font:inherit;font-size:17px}
 .debug-dialog .debug-ad-button[aria-pressed=true]{background:linear-gradient(#477d4a,#286545);border-color:#33613e}
+
+body > .banner-region{position:fixed;z-index:50;left:50%;bottom:calc(66px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(100%,540px);padding:5px 8px;background:#fff8e9;border-top:1px solid #cda86f;box-shadow:0 -3px 12px #28170f44;display:flex;justify-content:center;box-sizing:border-box}body > .banner-region[hidden]{display:none}body > .banner-region .banner-target{width:100%;min-height:50px}
