@@ -1,7 +1,7 @@
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
 import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
-import {catalog,byId,kstDate,productionBlockReason} from './factory-model.js';
+import {catalog,byId,kstDate,productionBlockReason,defaultFactoryCatalog,drawCatalog} from './factory-model.js';
 import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth,sanitizePositions} from './placement.js';
 import {planterClipPath,clipPlanter} from './planter.js';
 import {pageEffects} from './page-effects.js';
@@ -10,7 +10,7 @@ import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
 import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
 const $=s=>document.querySelector(s),preview=new URLSearchParams(location.search).get('preview')==='1';
 let snapshot,active='tree',busy=false,filter=0,selling=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
-let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),collectionReward:false,productionReady:true,exchangeReady:true,payments:[],catalog:catalog.map((a,i)=>({id:a.id,value:1+i%3}))};
+let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),collectionReward:false,productionReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
 function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10});}
 async function load(){if(preview){rollover();snapshot=structuredClone(previewState);}else snapshot=await factoryCall('state');}
 function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,4500);}
@@ -119,7 +119,7 @@ async function produceItem(){
  const reason=!preview&&productionBlockReason(snapshot);
  if(reason){const content=node('div');content.append(node('p','',reason),button('확인',()=>$('dialog').close()));modal('공장 생산 준비 중',content);return;}
  await run(async()=>{
- let result;if(preview){rollover();if(previewState.used>=previewState.limit)return;const a=catalog[previewState.used%30],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:1+catalog.indexOf(a)%3,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=await factoryAd('produce');
+ let result;if(preview){rollover();if(previewState.used>=previewState.limit)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=await factoryAd('produce');
  await load();renderPage();const scene=$('.workshop');scene?.classList.remove('stopped');scene?.classList.add('producing');const produced=snapshot.items.find(i=>i.id===result.itemId);if(produced&&scene){const reveal=art(byId[produced.asset_id]);reveal.className='revealed-ornament';scene.append(reveal);}const skip=button('연출 건너뛰기',()=>{},'skip-production');skip.disabled=false;shell.append(skip);
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
  const item=snapshot.items.find(i=>i.id===result.itemId);if(item)showItem(byId[item.asset_id],[item],true);
