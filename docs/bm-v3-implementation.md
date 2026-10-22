@@ -13,7 +13,7 @@
 ## 서버 담당 적용 순서
 1. 기존 DB 백업 후 `npm run db:migrate:remote`로 `0006_factory.sql`, `0007_ad_gates.sql` 순서로 적용. 기존 테이블 삭제/초기화 없음.
 2. 확정 카탈로그는 `wrangler.jsonc`의 `TREE_FACTORY_CATALOG`에 포함되어 Worker 배포 시 적용된다. 전체 30종의 판매 가치와 가중치는 [핵심 기획](bm-v3-factory-collection.md)의 표와 일치한다. 변수가 아예 없으면 `src/factory-model.js`의 동일한 기본 카탈로그를 사용한다. 명시적으로 등록한 변수가 잘못된 JSON·중복·누락·잘못된 값이면 기존과 같이 생산을 차단한다. 별도 운영 변수로 덮어쓸 경우 확정 구성을 유지해야 하며, 저장소 설정을 통한 다음 배포 시 저장소 값이 적용된다.
-3. 기존 `REWARDED_AD_GROUP_ID` 한 개를 생산·야근에 공용 사용. 기존 문구형/이미지형 로딩 배너 유지. 트리 화면 배너는 중단.
+3. `REWARDED_AD_GROUP_ID`는 생산·야근·토스포인트 전환에 사용하고, `INTER_AD_GROUP_ID`는 장식 판매에 사용한다. 로딩 배너 그룹은 기존 값을 유지하며 트리 화면 배너는 중단. 판매와 전환은 각 광고 시청 완료 후 서버에서 확정한다.
 4. 기존 `TOSS_MTLS`, `TOSS_PROMOTION_MODE`, `TOSS_PROMOTION_CODE_EXCHANGE`로 지급 연결. 미설정이면 교환 비활성화. 테스트 모드 완료는 실지급 없이 예약 잔액 복원.
 5. Worker 배포 후 프런트 빌드/배포. 이 커밋 자체는 운영 DB 마이그레이션이나 배포를 수행하지 않는다.
 
