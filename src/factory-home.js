@@ -8,13 +8,46 @@ import {pageEffects} from './page-effects.js';
 import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
 import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
 import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
-const $=s=>document.querySelector(s),preview=new URLSearchParams(location.search).get('preview')==='1';
+const $=s=>document.querySelector(s),urlPreview=new URLSearchParams(location.search).get('preview')==='1';
+let preview=urlPreview,debugMode=false;
 let snapshot,active='tree',busy=false,filter=0,selling=false,debugAdsSkipped=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
 let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),treeSold:false,productionReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
 function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10});}
 async function load(){if(preview){rollover();snapshot=structuredClone(previewState);}else snapshot=await factoryCall('state');}
 function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,4500);}
-function allowDebugAdSkip(){if(debugAdsSkipped)return true;toast('화면 하단 디버그 버튼에서 광고 스킵을 먼저 켜 주세요.');return false;}
+function allowDebugAdSkip(){if(debugAdsSkipped)return true;toast('디버그 메뉴에서 광고 스킵을 켜 주세요.');return false;}
+function openDebugMenu(){
+ if(busy)return;
+ const content=node('div','debug-menu-content');
+ content.append(node('p','','테스트 중에는 광고 단계만 건너뜁니다. 변경 내용은 이 화면에서만 적용되며 서버로 지급되지 않아요.'));
+ const toggle=button(debugAdsSkipped?'광고 스킵 끄기':'광고 스킵 켜기',async()=>{
+  if(!debugAdsSkipped){
+   if(!preview){previewState=structuredClone(snapshot);debugMode=true;preview=true;}
+   debugAdsSkipped=true;
+  }else{
+   debugAdsSkipped=false;
+   if(debugMode){debugMode=false;preview=urlPreview;await load();}
+  }
+  $('dialog').close();await render();toast(debugAdsSkipped?'디버그 광고 스킵을 켰어요.':'디버그 광고 스킵을 껐어요.');
+ },'debug-ad-button');
+ toggle.setAttribute('aria-pressed',String(debugAdsSkipped));content.append(toggle);
+ const dialog=$('dialog');dialog.classList.add('debug-dialog');
+ modal('디버그 메뉴',content);
+ const title=dialog.querySelector('#modal-title');let drag=null;
+ title.style.touchAction='none';title.style.cursor='move';
+ title.onpointerdown=event=>{
+  if(event.target.closest('button'))return;
+  const rect=dialog.getBoundingClientRect();dialog.style.margin='0';dialog.style.left=rect.left+'px';dialog.style.top=rect.top+'px';dialog.style.transform='none';
+  drag={x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};title.setPointerCapture(event.pointerId);event.preventDefault();
+ };
+ title.onpointermove=event=>{
+  if(!drag)return;
+  const rect=dialog.getBoundingClientRect(),left=Math.max(0,Math.min(innerWidth-rect.width,drag.left+event.clientX-drag.x)),top=Math.max(0,Math.min(innerHeight-rect.height,drag.top+event.clientY-drag.y));
+  dialog.style.left=left+'px';dialog.style.top=top+'px';
+ };
+ title.onpointerup=()=>{drag=null;};
+ title.onpointercancel=()=>{drag=null;};
+}
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;}
 function button(text,fn,cls='factory-button'){const b=node('button',cls,text);b.type='button';b.disabled=busy;b.onclick=fn;return b;}
 function adButton(text,fn,cls='factory-button ad-action'){const b=button('',fn,cls),icon=node('span','ad-icon');icon.setAttribute('aria-hidden','true');icon.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 4V6l-5 4H3zm12-1a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg><span>광고</span>';b.append(icon,document.createTextNode(text));return b;}
@@ -23,6 +56,8 @@ function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(va
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
+const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');document.body.append(debugLaunch);
+$('dialog').addEventListener('close',()=>{const dialog=$('dialog');dialog.classList.remove('debug-dialog');dialog.style.left='';dialog.style.top='';dialog.style.margin='';dialog.style.transform='';});
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
 const share=button('사진 저장 · 공유',showShare,'photo-link');$('.home-links').append(share);
@@ -104,7 +139,7 @@ function renderFactory(){
  const b=button(snapshot.overtime?'오늘 야근수당 지급 완료':'야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
  b.disabled=busy;
  overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));shell.append(overtime);
- if(preview){const notice=node('p','preview-notice','디자인 미리보기 · 가격·확률은 예시 · 실제 광고/지급 없음');shell.append(notice);const debug=node('section','debug-ad-panel');debug.append(node('p','','디버그 모드 · 광고와 지급은 실제로 실행되지 않아요.'));const toggle=button(debugAdsSkipped?'광고 스킵 켜짐':'광고 스킵 켜기',()=>{debugAdsSkipped=!debugAdsSkipped;renderPage();toast(debugAdsSkipped?'디버그 광고 스킵을 켰어요.':'디버그 광고 스킵을 껐어요.');},'debug-ad-button');toggle.setAttribute('aria-pressed',String(debugAdsSkipped));debug.append(toggle);shell.append(debug);}
+ if(preview){const notice=node('p','preview-notice','미리보기 · 광고/지급은 실제로 실행되지 않아요.');shell.append(notice);}
 }
 async function requestOvertime(){
  if(busy)return;
