@@ -23,8 +23,7 @@ function openDebugMenu(){
  content.append(node('p','',preview?'미리보기에서는 광고와 지급이 로컬에서만 시뮬레이션됩니다.':snapshot.debugAdSkipEnabled?'서버 환경과 관계없이 광고 단계를 건너뛰고 DB 기반 테스트 포인트 전환을 실행합니다.':'광고 스킵을 사용할 수 없습니다.'));
  const toggle=button(debugAdsSkipped?'광고 스킵 끄기':'광고 스킵 켜기',async()=>{
   if(!preview&&!snapshot.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}
-  debugAdsSkipped=!debugAdsSkipped;debugMode=debugAdsSkipped;
-  $('dialog').close();await render();toast(debugAdsSkipped?'서버 광고 스킵을 켰어요.':'서버 광고 스킵을 껐어요.');
+  $('dialog').close();await setDebugSkip(!debugAdsSkipped);
  },'debug-ad-button');
  toggle.disabled=!preview&&!snapshot.debugAdSkipEnabled;toggle.setAttribute('aria-pressed',String(debugAdsSkipped));content.append(toggle);
  const dialog=$('dialog');dialog.classList.add('debug-dialog');
@@ -52,7 +51,11 @@ function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(va
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
-const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');document.body.append(debugLaunch);
+const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');
+const debugSkipSwitch=button('',()=>setDebugSkip(!debugAdsSkipped),'debug-skip-switch');debugSkipSwitch.setAttribute('role','switch');debugSkipSwitch.setAttribute('aria-label','광고 스킵 켜기 또는 끄기');
+const debugControls=node('div','debug-controls');debugControls.append(debugSkipSwitch,debugLaunch);document.body.append(debugControls);
+function syncDebugSkipSwitch(){const enabled=preview||!!snapshot?.debugAdSkipEnabled;debugSkipSwitch.disabled=!enabled;debugSkipSwitch.setAttribute('aria-checked',String(debugAdsSkipped));debugSkipSwitch.innerHTML='<span class="debug-radio" aria-hidden="true"></span><span>'+ (debugAdsSkipped?'ON':'OFF') +'</span>';}
+async function setDebugSkip(value){if(!preview&&!snapshot?.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}debugAdsSkipped=value;debugMode=value;syncDebugSkipSwitch();await render();toast(value?'광고 스킵 ON':'광고 스킵 OFF');}
 $('dialog').addEventListener('close',()=>{const dialog=$('dialog');dialog.classList.remove('debug-dialog');dialog.style.left='';dialog.style.top='';dialog.style.margin='';dialog.style.transform='';});
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
@@ -176,7 +179,7 @@ function showItem(a,owned,fresh=false,chosenId=null){
  modal(a.name,c);
 }
 function setPageAfterAction(page){active=page;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';shell.hidden=page==='tree';document.body.dataset.page=page;tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.page===page?'page':'false'));renderPage();}
-async function render(){await renderTree();renderPage();}
+async function render(){syncDebugSkipSwitch();await renderTree();renderPage();}
 async function treePicture(){
  const home=$('.home'),rect=home.getBoundingClientRect(),canvas=document.createElement('canvas');canvas.width=1080;canvas.height=Math.round(rect.height/rect.width*1080)+140;
  const ctx=canvas.getContext('2d'),scale=1080/rect.width;ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);
