@@ -11,7 +11,7 @@
 - 서버에서 추첨·개별 아이템 소유권·판매 금액·원장·도감·KST 생산량·야근·배치 revision 관리. 실제 지급은 기존 지급 상태 머신을 v3 원장에 맞게 분리.
 
 ## 서버 담당 적용 순서
-1. 기존 DB 백업 후 `npm run db:migrate:remote`로 `0006_factory.sql` 적용. 기존 테이블 삭제/초기화 없음.
+1. 기존 DB 백업 후 `npm run db:migrate:remote`로 `0006_factory.sql`, `0007_ad_gates.sql` 순서로 적용. 기존 테이블 삭제/초기화 없음.
 2. 확정 카탈로그는 `wrangler.jsonc`의 `TREE_FACTORY_CATALOG`에 포함되어 Worker 배포 시 적용된다. 전체 30종의 판매 가치와 가중치는 [핵심 기획](bm-v3-factory-collection.md)의 표와 일치한다. 변수가 아예 없으면 `src/factory-model.js`의 동일한 기본 카탈로그를 사용한다. 명시적으로 등록한 변수가 잘못된 JSON·중복·누락·잘못된 값이면 기존과 같이 생산을 차단한다. 별도 운영 변수로 덮어쓸 경우 확정 구성을 유지해야 하며, 저장소 설정을 통한 다음 배포 시 저장소 값이 적용된다.
 3. 기존 `REWARDED_AD_GROUP_ID` 한 개를 생산·야근에 공용 사용. 기존 문구형/이미지형 로딩 배너 유지. 트리 화면 배너는 중단.
 4. 기존 `TOSS_MTLS`, `TOSS_PROMOTION_MODE`, `TOSS_PROMOTION_CODE_EXCHANGE`로 지급 연결. 미설정이면 교환 비활성화. 테스트 모드 완료는 실지급 없이 예약 잔액 복원.
