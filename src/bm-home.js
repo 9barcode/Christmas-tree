@@ -55,6 +55,10 @@ function updateCTA(){
   else label='리워드 광고 보고 30P 교환';
  }
  button.disabled=busy||disabled;
+ const adLabel=label==='리워드 광고 보고 30P 교환';
+ let adIcon=button.querySelector('.ad-icon');
+ if(adLabel&&!adIcon){adIcon=document.createElement('span');adIcon.className='ad-icon';adIcon.setAttribute('aria-hidden','true');adIcon.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 4V6l-5 4H3zm12-1a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg><span>광고</span>';button.insertBefore(adIcon,button.lastChild);}
+ if(!adLabel)adIcon?.remove();
  button.lastChild.textContent=busy?'처리 중이에요…':label;
  button.classList.toggle('gift-cta',tree.count===30);
 }
