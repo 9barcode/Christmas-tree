@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
+      - 'src/factory-model.js'
       - 'src/placement.js'
       - 'src/decoration-manifest.js'
       - 'migrations/**'
