@@ -1,9 +1,5 @@
-import {missionConfig} from './config.js';
-import {advanceMissionPayment} from './mission-payments.js';
 
 const sha256=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),byte=>byte.toString(16).padStart(2,'0')).join('');
-const kstDate=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const yesterday=date=>new Date(Date.parse(date+'T00:00:00Z')-86400000).toISOString().slice(0,10);
 export async function bodyOf(request) {
   const text=await request.text();
   if(text.length>4096)throw Error('invalid_request');
