@@ -23,8 +23,7 @@ function openDebugMenu(){
  content.append(node('p','',preview?'미리보기에서는 광고와 지급이 로컬에서만 시뮬레이션됩니다.':snapshot.debugAdSkipEnabled?'서버 환경과 관계없이 광고 단계를 건너뛰고 DB 기반 테스트 포인트 전환을 실행합니다.':'광고 스킵을 사용할 수 없습니다.'));
  const toggle=button(debugAdsSkipped?'광고 스킵 끄기':'광고 스킵 켜기',async()=>{
   if(!preview&&!snapshot.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}
-  debugAdsSkipped=!debugAdsSkipped;debugMode=debugAdsSkipped;
-  $('dialog').close();await render();toast(debugAdsSkipped?'서버 광고 스킵을 켰어요.':'서버 광고 스킵을 껐어요.');
+  $('dialog').close();await setDebugSkip(!debugAdsSkipped);
  },'debug-ad-button');
  toggle.disabled=!preview&&!snapshot.debugAdSkipEnabled;toggle.setAttribute('aria-pressed',String(debugAdsSkipped));content.append(toggle);
  const dialog=$('dialog');dialog.classList.add('debug-dialog');
@@ -52,7 +51,11 @@ function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(va
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
-const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');document.body.append(debugLaunch);
+const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');
+const debugSkipSwitch=button('',()=>setDebugSkip(!debugAdsSkipped),'debug-skip-switch');debugSkipSwitch.setAttribute('role','switch');debugSkipSwitch.setAttribute('aria-label','광고 스킵 켜기 또는 끄기');
+const debugControls=node('div','debug-controls');debugControls.append(debugSkipSwitch,debugLaunch);document.body.append(debugControls);
+function syncDebugSkipSwitch(){const enabled=preview||!!snapshot?.debugAdSkipEnabled;debugSkipSwitch.disabled=!enabled;debugSkipSwitch.setAttribute('aria-checked',String(debugAdsSkipped));debugSkipSwitch.innerHTML='<span class="debug-radio" aria-hidden="true"></span><span>'+ (debugAdsSkipped?'ON':'OFF') +'</span>';}
+async function setDebugSkip(value){if(!preview&&!snapshot?.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}debugAdsSkipped=value;debugMode=value;syncDebugSkipSwitch();await render();toast(value?'광고 스킵 ON':'광고 스킵 OFF');}
 $('dialog').addEventListener('close',()=>{const dialog=$('dialog');dialog.classList.remove('debug-dialog');dialog.style.left='';dialog.style.top='';dialog.style.margin='';dialog.style.transform='';});
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
@@ -133,10 +136,10 @@ function renderFactory(){
  const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
  const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
  const unavailable=!preview&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
- const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):adButton('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
+ const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
- const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):adButton('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
+ const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):button('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
  b.disabled=busy;
  overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));shell.append(overtime);
  if(preview){const notice=node('p','preview-notice','미리보기 · 광고/지급은 실제로 실행되지 않아요.');shell.append(notice);}
@@ -176,7 +179,7 @@ function showItem(a,owned,fresh=false,chosenId=null){
  modal(a.name,c);
 }
 function setPageAfterAction(page){active=page;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';shell.hidden=page==='tree';document.body.dataset.page=page;tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.page===page?'page':'false'));renderPage();}
-async function render(){await renderTree();renderPage();}
+async function render(){syncDebugSkipSwitch();await renderTree();renderPage();}
 async function treePicture(){
  const home=$('.home'),rect=home.getBoundingClientRect(),canvas=document.createElement('canvas');canvas.width=1080;canvas.height=Math.round(rect.height/rect.width*1080)+140;
  const ctx=canvas.getContext('2d'),scale=1080/rect.width;ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);

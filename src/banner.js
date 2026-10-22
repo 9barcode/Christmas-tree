@@ -67,7 +67,6 @@ export function startHomeBanner(){
  const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
   const covered=entries.some(entry=>entry.isIntersecting);
   document.querySelector('.tree-utilities')?.classList.toggle('banner-in-view',covered);
-  document.querySelector('.debug-launch-button')?.classList.toggle('banner-in-view',covered);
  },{threshold:.1}):null;
  observer?.observe(region);
  const start=()=>{place();banner.start().catch(()=>banner.stop())};
