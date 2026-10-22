@@ -1,4 +1,5 @@
 import {request,ensureMissionSession} from './mission-client.js';
+import {clientError} from './client-errors.js';
 import {loadServiceConfig} from './service-config.js';
 const messages={
  slot_unavailable:'트리 상태가 바뀌었어요. 새로 불러와 주세요.',tree_full:'장식 30개를 모두 모았어요.',
@@ -9,7 +10,7 @@ const messages={
  unauthorized:'사용자 인증을 다시 확인해 주세요.',service_unavailable:'서버에 연결하지 못했어요. 잠시 후 다시 눌러 주세요.',
 };
 async function call(path,body){
- try{return await request('/api/v2'+path,body);}catch(error){error.message=messages[error.code]||error.message;throw error;}
+ try{return await request('/api/v2'+path,body);}catch(error){throw clientError(error,messages);}
 }
 export const loadBM=()=>call('/state');
 export const recoverExchanges=()=>call('/exchanges/recover',{});
