@@ -36,7 +36,7 @@ async function view(env,user){
  q(env,'SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
  const rows=configured(env),overtime=usage.results.some(r=>r.purpose==='overtime'),used=usage.results.find(r=>r.purpose==='produce')?.n||0;
  const reward=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'collection:'+user.id).first();
- return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),collectionReward:!!reward,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE,payments:payments.results};
+ return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),collectionReward:!!reward,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 async function reserve(env,user,body){
  if(['sell','exchange'].includes(body.purpose)){
