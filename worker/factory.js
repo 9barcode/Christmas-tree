@@ -60,7 +60,7 @@ async function reserve(env,user,body,allowDebugSkip=false){
  }
  if(!['produce','overtime'].includes(body.purpose))fail('invalid_request');
  if(!configured(env))fail('catalog_not_configured');
- const configuredAd=publicAdConfig(env).rewardedAdGroupId;const debugSkip=allowDebugSkip&&debugAdSkipEnabled(env);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
+ const ads=publicAdConfig(env),configuredAd=body.purpose==='produce'?ads.interstitialAdGroupId:ads.rewardedAdGroupId;const debugSkip=allowDebugSkip&&debugAdSkipEnabled(env);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
  const id=crypto.randomUUID(),date=kstDate(),expires=Date.now()+600000;
  const used="(SELECT count(*) FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='produce' AND state='completed')";
  const overtime="EXISTS(SELECT 1 FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='overtime' AND state='completed')";
@@ -82,7 +82,8 @@ async function finish(env,user,body,allowDebugSkip=false){
  const r=await q(env,'SELECT * FROM tree_factory_requests WHERE user_id=? AND id=?',user.id,body.requestId).first();
  if(!r)fail('request_not_found');if(r.state==='completed')return {itemId:r.result_id};
  if(r.state!=='reserved'||r.date!==kstDate()||r.expires_at<=Date.now())fail('request_expired');
- if(!(allowDebugSkip&&debugAdSkipEnabled(env))&&(body.adGroupId!==r.ad_group_id||body.eventType!=='userEarnedReward'||body.rewarded!==true||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
+ const rewarded=r.purpose==='overtime';const valid=rewarded?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
+ if(!(allowDebugSkip&&debugAdSkipEnabled(env))&&(body.adGroupId!==r.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
  const now=Date.now(),rows=configured(env);if(!rows)fail('catalog_not_configured');
  const draw=r.purpose==='produce'?drawCatalog(rows):null;
  const id=draw?crypto.randomUUID():null;
@@ -97,7 +98,7 @@ async function finish(env,user,body,allowDebugSkip=false){
 async function debugAdSkip(env,user,body){
  if(!debugAdSkipEnabled(env))fail('debug_ad_skip_disabled');
  const reservation=await reserve(env,user,body,true),purpose=reservation.purpose;
- const interstitial=['sell','tree-sale'].includes(purpose),rewarded=purpose==='exchange'||!interstitial;
+ const interstitial=['sell','tree-sale','produce'].includes(purpose),rewarded=purpose==='exchange'||purpose==='overtime';
  return finish(env,user,{requestId:reservation.requestId,adGroupId:reservation.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded,displayed:true,dismissed:true},true);
 }
 async function sell(env,user,body){
