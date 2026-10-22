@@ -10,7 +10,7 @@ import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
 import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
 const $=s=>document.querySelector(s),preview=new URLSearchParams(location.search).get('preview')==='1';
 let snapshot,active='tree',busy=false,filter=0,selling=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
-let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),collectionReward:false,productionReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
+let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),treeSold:false,productionReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
 function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10});}
 async function load(){if(preview){rollover();snapshot=structuredClone(previewState);}else snapshot=await factoryCall('state');}
 function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,4500);}
@@ -29,7 +29,7 @@ const camera=node('img');camera.src='assets/ui/painted/camera.webp';camera.alt='
 const utilities=$('.home-links');utilities.classList.add('tree-utilities');document.body.append(utilities);
 new ResizeObserver(()=>document.documentElement.style.setProperty('--page-tabs-height',tabs.getBoundingClientRect().height+'px')).observe(tabs);
 $('.slots').hidden=true;$('.slots').replaceChildren();$('.home footer').hidden=true;
-$('.guide-link').onclick=()=>{const c=node('div');c.append(node('p','','광고를 보고 공장에서 장식을 만들어요. 보관함에서 배치하거나 판매할 수 있어요.'),node('p','','하루 기본 10회, 야근 광고를 보면 하루 한 번 10회를 더 생산해요. 생산할 때마다 광고를 시청해요.'),node('p','','최초 획득한 장식은 판매해도 도감에 남아요. 서로 다른 30종을 모으면 최초 1회 30원을 적립해요.'));modal('이용안내',c);};
+$('.guide-link').onclick=()=>{const c=node('div');c.append(node('p','','광고를 보고 공장에서 장식을 만들어요. 보관함에서 배치하거나 판매할 수 있어요.'),node('p','','하루 기본 10회, 야근 광고를 보면 하루 한 번 10회를 더 생산해요. 생산할 때마다 광고를 시청해요.'),node('p','','최초 획득한 장식은 판매해도 도감에 남아요. 서로 다른 장식 30종을 모으면 장식 가치 합계 47원인 트리를 판매하고 50원을 적립해요.'));modal('이용안내',c);};
 $('.rewards-link').onclick=()=>setPage('inventory');$('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 const bounds=new Map();
 async function assetNode(path,className){
@@ -70,8 +70,8 @@ function renderPage(){
  if(active==='factory'){renderFactory();return;}
  const content=node('div','factory-content');shell.append(content);
  if(active==='collection'){
- const summary=node('section','collection-summary');summary.append(node('p','','수집 현황'),node('strong','',`${snapshot.collection.length} / 30`));const progress=node('progress');progress.max=30;progress.value=snapshot.collection.length;progress.setAttribute('aria-label','도감 수집 현황');summary.append(progress,node('p','','서로 다른 장식 30종 모으면 30원!'));
- if(snapshot.collection.length===30){const claim=button(snapshot.collectionReward?'완성 보상 받기 완료':'30원 완성 보상 받기',()=>run(async()=>{if(preview){if(!previewState.collectionReward){previewState.collectionReward=true;previewState.balance+=30;}await load();}else snapshot=await factoryCall('claim',{});renderPage();}));claim.disabled=busy||snapshot.collectionReward;summary.append(claim);}content.append(summary);
+ const summary=node('section','collection-summary');summary.append(node('p','','수집 현황'),node('strong','',`${snapshot.collection.length} / 30`));const progress=node('progress');progress.max=30;progress.value=snapshot.collection.length;progress.setAttribute('aria-label','도감 수집 현황');summary.append(progress,node('p','','장식 30종의 가치 합계 47원 · 트리 판매 시 50원 적립'));
+ if(snapshot.collection.length===30){const sold=!!snapshot.treeSold;const claim=adButton(sold?'트리 판매 완료 · 50원 적립':'광고 보고 트리 판매 · 50원',()=>{const confirm=node('div');confirm.append(node('p','','장식 30종을 모두 모은 트리를 판매하고 50원을 적립해요. 트리 판매는 한 번만 할 수 있어요.'));confirm.append(adButton('트리 판매하고 50원 받기',()=>run(async()=>{if(preview){if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;}await load();}else{const ad=await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}$('dialog').close();renderPage();toast('트리를 판매하고 50원을 적립했어요.');})),button('취소',()=>$('dialog').close()));modal('트리 판매',confirm);});claim.disabled=busy||sold;summary.append(claim);}content.append(summary);
  }else{
  const modes=node('div','inventory-modes');for(const [mode,label] of [[false,'보유 장식'],[true,'판매하기']]){const b=button(label,()=>{selling=mode;renderPage();},selling===mode?'selected':'');modes.append(b);}content.append(modes);
  const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}원`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){toast('디자인 미리보기 · 실제 포인트 지급 없음');return;}let adRequestId;if(!pending){const ad=await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet);
@@ -129,11 +129,13 @@ function showItem(a,owned,fresh=false,chosenId=null){
  const c=node('div','item-detail');c.append(art(a),node('p','',fresh?'새 장식이 도착했어요! 도감에 등록했어요.':`보유 ${owned.length}개 · 트리 배치 ${owned.filter(i=>i.placed).length}개`));
  const item=owned.find(i=>i.id===chosenId)||(selling?owned.find(i=>i.value>0):null)||owned.find(i=>!i.placed)||owned[0];if(owned.length>1){const select=node('select','instance-picker');select.setAttribute('aria-label','사용할 장식 선택');owned.forEach((i,index)=>{const o=node('option','',`${index+1}번째 · ${i.value?i.value+'원':'기존 장식'} · ${i.placed?'배치 중':'보관 중'}`);o.value=i.id;o.selected=i.id===item.id;select.append(o);});select.onchange=()=>showItem(a,owned,false,select.value);c.append(select);}c.append(node('p','',item.value?`판매 가치 ${item.value}원`:'기존 트리에서 보존한 장식 · 판매 대상 아님'));
  c.append(button('보관하기',()=>$('dialog').close()));
- c.append(button(item.placed?'트리에서 회수하기':'트리에 배치하기',()=>run(async()=>{
+ const duplicatePlaced=!item.placed&&snapshot.items.some(i=>i.placed&&i.asset_id===item.asset_id);
+ const placementButton=button(item.placed?'트리에서 회수하기':duplicatePlaced?'같은 장식은 이미 트리에 있어요':'트리에 배치하기',()=>run(async()=>{
  const current=snapshot.items.find(i=>i.id===item.id);if(!current)throw Error('장식 상태를 다시 확인해 주세요.');
- if(!current.placed){const placed=snapshot.items.filter(i=>i.placed);if(placed.length>=30)throw Error('트리에는 최대 30개를 배치할 수 있어요.');if(['lights','topper'].includes(a.kind)&&placed.some(i=>byId[i.asset_id].kind===a.kind))throw Error('별과 전구줄은 한 개씩만 배치할 수 있어요.');Object.assign(current,defaultPosition(a.kind,placed.filter(i=>byId[i.asset_id].kind===a.kind).length),{placed:1});}else current.placed=0;
+ if(!current.placed){if(snapshot.items.some(i=>i.placed&&i.asset_id===current.asset_id))throw Error('같은 장식은 트리에 하나만 놓을 수 있어요.');const placed=snapshot.items.filter(i=>i.placed);if(placed.length>=30)throw Error('트리에는 최대 30개를 배치할 수 있어요.');if(['lights','topper'].includes(a.kind)&&placed.some(i=>byId[i.asset_id].kind===a.kind))throw Error('별과 전구줄은 한 개씩만 배치할 수 있어요.');Object.assign(current,defaultPosition(a.kind,placed.filter(i=>byId[i.asset_id].kind===a.kind).length),{placed:1});}else current.placed=0;
  await saveLayout();await renderTree();$('dialog').close();setPageAfterAction('tree');
- })));
+ }));
+ placementButton.disabled=busy||duplicatePlaced;c.append(placementButton);
  if(item.value>0)c.append(adButton(`1개 판매하기 · ${item.value}원`,()=>{const confirmation=node('div');confirmation.append(node('p','',`${a.name} 1개를 ${item.value}원에 판매할까요? 도감 기록은 유지돼요.${item.placed?' 트리에서도 회수돼요.':''}`),adButton('판매 확정',()=>run(async()=>{if(preview){const i=previewState.items.findIndex(i=>i.id===item.id);if(i>=0){previewState.balance+=previewState.items[i].value;previewState.items.splice(i,1);}await load();}else{const ad=await factoryAd('sell',{itemId:item.id});snapshot=await factoryCall('sell',{itemId:item.id,adRequestId:ad.requestId});}await renderTree();$('dialog').close();toast('판매 금액을 적립했어요.');})),button('취소',()=>showItem(a,owned,fresh)));modal('장식 판매',confirmation);},'factory-button ad-action'));
  modal(a.name,c);
 }
