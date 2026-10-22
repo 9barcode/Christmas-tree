@@ -9,7 +9,6 @@ const requiredTables = [
   'tree_users', 'tree_sessions', 'tree_trees', 'tree_cycles',
   'tree_ad_completions', 'tree_attendance', 'tree_settlements',
   'tree_promotion_api_calls',
-  'tree_mission_progress', 'tree_promotion_missions', 'tree_mission_payments', 'tree_mission_api_calls',
 ];
 export default {
   async fetch(request, env, context) {
