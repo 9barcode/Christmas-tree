@@ -1,4 +1,5 @@
 import {apiBaseUrl} from './api-base.js';
+import {readApiResponse} from './api-response.js';
 let session, starting;
 export async function request(path,body,authenticated=true) {
   if(authenticated)await ensureMissionSession();
@@ -6,8 +7,8 @@ export async function request(path,body,authenticated=true) {
     method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(authenticated?{authorization:'Bearer '+session.token}:{})},
     ...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(45000),credentials:'omit',
   });
-  const payload=await response.json();
   if(response.status===401&&authenticated)session=undefined;
+  const payload=await readApiResponse(response);
   if(!response.ok){const error=Error(payload.message||'서버 연결을 확인해 주세요.');error.code=payload.error;error.status=response.status;throw error;}
   return payload;
 }

@@ -1,11 +1,13 @@
 import {cp,mkdir,rm,writeFile} from 'node:fs/promises';
 import {build} from 'esbuild';
+import {buildApiBase} from './api-config.mjs';
+const release=process.argv.includes('--release')||process.env.NODE_ENV==='production';
+const configuredBase=buildApiBase(process.env.TREE_API_BASE_URL,{release});
 const out=new URL('../dist/toss/',import.meta.url);
 await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
 for(const path of ['index.html','src','assets'])await cp(new URL(`../${path}`,import.meta.url),new URL(path,out),{recursive:true});
-const configuredBase = (process.env.TREE_API_BASE_URL || '').trim().replace(/\/$/, '');
-if (configuredBase && new URL(configuredBase).protocol !== 'https:') throw Error('TREE_API_BASE_URL must use HTTPS');
 await writeFile(new URL('src/api-base.js',out), 'export const apiBaseUrl = ' + JSON.stringify(configuredBase) + ';\n');
+console.log('API origin:',configuredBase||'(same origin: local development)');
 await build({entryPoints:[new URL('../src/native-file.js',import.meta.url).pathname],outfile:new URL('src/native-file.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});
 await build({entryPoints:[new URL('../src/native-promotions.js',import.meta.url).pathname],outfile:new URL('src/native-promotions.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});
 await build({entryPoints:[new URL('../src/native-banner.js',import.meta.url).pathname],outfile:new URL('src/native-banner.js',out).pathname,bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true});

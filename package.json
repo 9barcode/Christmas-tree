@@ -6,7 +6,7 @@
     "start": "python3 -m http.server 4173",
     "test": "node --test tests/*.test.js",
     "build": "node scripts/build-web.mjs",
-    "build:toss": "npm run build && ait build",
+    "build:toss": "node scripts/build-web.mjs --release && ait build",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "db:migrate:local": "node scripts/migrate-tree.mjs --local",

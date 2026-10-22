@@ -21,7 +21,7 @@ Cloudflare Dashboard → Workers & Pages → treemoa → Settings → Variables 
 
 ## 앱의 설정 조회
 
-GitHub 원본 저장소 Settings → Secrets and variables → Actions → Variables에 TREE_API_BASE_URL을 등록합니다. 값은 배포된 treemoa Worker의 HTTPS 기본 주소이며 경로 /api는 붙이지 않습니다. 이 변수는 비밀이 아닙니다. 등록 후 AIT를 새로 빌드해야 기본 주소가 반영됩니다. 로컬 빌드는 TREE_API_BASE_URL 환경변수를 사용합니다. 미설정 시 같은 출처의 /api/config를 요청하므로 별도 출처인 토스 앱은 반드시 Worker 주소를 설정해야 합니다.
+GitHub 원본 저장소 Settings → Secrets and variables → Actions → Variables에 TREE_API_BASE_URL을 등록하면 서버 주소를 변경할 수 있습니다. 값은 배포된 treemoa Worker의 HTTPS 기본 주소이며 경로 /api는 붙이지 않습니다. 이 변수는 비밀이 아닙니다. 등록 후 AIT를 새로 빌드해야 기본 주소가 반영됩니다. 로컬 빌드는 TREE_API_BASE_URL 환경변수를 사용합니다. 미설정 시 릴리스 빌드는 기존 `https://treemoa.bluehawhy.workers.dev`를 사용합니다. `npm run build` 개발 빌드만 같은 출처의 API를 사용합니다. `/api` 경로나 쿼리 등 잘못된 서버 주소를 설정하면 빌드가 실패합니다.
 
 GET /api/config는 ads.bannerAdGroupId, ads.rewardedAdGroupIds(키 1~5)만 공개합니다. 프로모션 코드와 모드는 노출하지 않습니다. 광고 ID는 앱에서 사용하므로 Secret으로 등록해도 클라이언트에 공개됩니다.
 앱에서는 window.treeServiceConfig.load() 또는 src/service-config.js의 loadServiceConfig()로 조회합니다. 실패 시 다시 호출할 수 있습니다. 홈 초기 로딩 중에는 호출하지 않습니다.

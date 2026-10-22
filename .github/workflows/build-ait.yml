@@ -28,7 +28,8 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Build production AIT
+      # Release builds use the verified Treemoa origin if the optional variable is empty.
+      - name: Build production AIT with validated API origin
         run: npm run build:toss
         env:
           TREE_API_BASE_URL: ${{ vars.TREE_API_BASE_URL }}
