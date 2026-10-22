@@ -17,7 +17,7 @@ async function decodeImage(img){if(img.decode)await img.decode();else if(!img.co
 try {
   await waitForHomeReady([
     // Module resolves only after state restore, manifest validation, current tree and earned decorations render.
-    ()=>import('./home.js'),
+    ()=>import('./bm-home.js'),
     ()=>Promise.all([...home.querySelectorAll('img')].map(decodeImage)),
   ]);
   stage='홈 슬롯 이미지';

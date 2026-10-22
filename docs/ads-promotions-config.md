@@ -1,5 +1,7 @@
 # 광고·프로모션 환경변수
 
+> 아래는 이전 출석 버전의 설정 이력이다. 현재 연결된 BM v2에서는 [런타임 광고 변수](runtime-ad-variables.md)와 [서버 연결 명세](bm-v2-server.md)를 사용한다. 광고 변수 4개를 유지하며 트리 추가·교환은 리워드, 장식만 전면광고다. 새 교환용 프로모션 코드는 `TOSS_PROMOTION_CODE_EXCHANGE`이고, 기존 출석 미션 코드를 자동 재사용하지 않는다.
+
 포도모아의 리워드 설정 방식을 트리별 REWARDED_AD_GROUP_ID_1~5로 확장하고, TOSS_PROMOTION_MODE, TOSS_PROMOTION_CODE_ATTENDANCE 이름을 따릅니다. 포도모아 운영 ID와 코드는 복사하지 않습니다.
 
 Cloudflare Dashboard → Workers & Pages → treemoa → Settings → Variables and Secrets에서 등록합니다.

@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
+      - 'src/placement.js'
+      - 'src/decoration-manifest.js'
       - 'migrations/**'
       - 'scripts/migrate-tree.mjs'
       - 'scripts/diagnose-cloudflare.mjs'
