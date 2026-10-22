@@ -20,9 +20,9 @@ function allowDebugAdSkip(){if(debugAdsSkipped)return true;toast('디버그 메�
 function openDebugMenu(){
  if(busy)return;
  const content=node('div','debug-menu-content');
- content.append(node('p','',preview?'미리보기에서는 광고와 지급이 로컬에서만 시뮬레이션됩니다.':snapshot.debugAdSkipEnabled?'서버 테스트 모드에서 광고 단계를 건너뛰고 DB 기반 테스트 포인트 지급을 실행합니다.':'서버 테스트 설정이 꺼져 있어 광고 스킵을 사용할 수 없습니다.'));
+ content.append(node('p','',preview?'미리보기에서는 광고와 지급이 로컬에서만 시뮬레이션됩니다.':snapshot.debugAdSkipEnabled?'서버 환경과 관계없이 광고 단계를 건너뛰고 DB 기반 테스트 포인트 전환을 실행합니다.':'광고 스킵을 사용할 수 없습니다.'));
  const toggle=button(debugAdsSkipped?'광고 스킵 끄기':'광고 스킵 켜기',async()=>{
-  if(!preview&&!snapshot.debugAdSkipEnabled){toast('서버의 테스트용 광고 스킵 설정이 꺼져 있어요.');return;}
+  if(!preview&&!snapshot.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}
   debugAdsSkipped=!debugAdsSkipped;debugMode=debugAdsSkipped;
   $('dialog').close();await render();toast(debugAdsSkipped?'서버 광고 스킵을 켰어요.':'서버 광고 스킵을 껐어요.');
  },'debug-ad-button');
