@@ -93,7 +93,11 @@ function bindDrag(n,kind,id,initial,back){let p=initial,drag;
 }
 async function saveLayout(){const body={revision:snapshot.revision,pot:snapshot.pot?.x?snapshot.pot:defaultPosition('pot'),items:snapshot.items.filter(i=>i.placed).map(i=>({id:i.id,x:i.x,y:i.y}))};if(preview){previewState.items=structuredClone(snapshot.items);previewState.pot=body.pot;previewState.revision++;await load();}else snapshot=await factoryCall('layout',body);}
 function art(a,locked=false){const img=node('img',locked?'locked-art':'');img.src='assets/thumbnails/'+a.id+'.webp';img.alt=locked?'미획득 장식':a.name;img.loading='lazy';return img;}
-function placePageBanner(){\n const region=document.querySelector('.page-banner');if(!region)return;\n if(active==='tree')$('.home').after(region);else shell.after(region);\n}\nfunction renderPage(){
+function placePageBanner(){
+ const region=document.querySelector('.page-banner');if(!region)return;
+ if(active==='tree')$('.home').after(region);else shell.after(region);
+}
+function renderPage(){
  stopFactoryScene();stopFactoryScene=()=>{};shell.classList.toggle('concept-factory',active==='factory');
  if(!snapshot)return;tabs.querySelectorAll('button').forEach(b=>b.disabled=busy);
  if(active==='tree'){placePageBanner();return;}
