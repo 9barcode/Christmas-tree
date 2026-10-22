@@ -23,28 +23,3 @@ export async function ensureMissionSession(){
   })().finally(()=>{starting=undefined});
   return starting;
 }
-const kstDate=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-function pendingKey(treeId){return 'tree.pending-attendance.'+session.userId+'.'+treeId}
-async function submitPending(treeId){
-  const key=pendingKey(treeId);
-  const raw=localStorage.getItem(key);
-  if(!raw)return false;
-  let saved;try{saved=JSON.parse(raw)}catch{localStorage.removeItem(key);return false}
-  if(saved.date!==kstDate()){localStorage.removeItem(key);return false}
-  await request('/api/attendance',saved.body);
-  localStorage.removeItem(key);
-  return true;
-}
-export async function retryMissionAttendance(treeId){
-  await ensureMissionSession();
-  return submitPending(treeId);
-}
-export async function recordMissionAttendance(treeId,ad){
-  await ensureMissionSession();
-  if(ad?.rewarded!==true||ad.eventType!=='userEarnedReward'||!ad.adGroupId)throw Error('광고 시청 완료를 확인해 주세요.');
-  const body={treeId,adGroupId:ad.adGroupId,eventType:'userEarnedReward'};
-  localStorage.setItem(pendingKey(treeId),JSON.stringify({date:kstDate(),body}));
-  await submitPending(treeId);
-}
-export async function recoverMissions(){return request('/api/promotions/recover',{})}
-export async function loadMissions(){return request('/api/promotions')}

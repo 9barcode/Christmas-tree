@@ -13,6 +13,7 @@ export function loadServiceConfig() {
       interstitialAdGroupId: typeof config.ads.interstitialAdGroupId==='string'?config.ads.interstitialAdGroupId.trim():'',
       bannerTextAdGroupId: typeof config.ads.bannerTextAdGroupId==='string'?config.ads.bannerTextAdGroupId.trim():'',
       bannerImageAdGroupId: typeof config.ads.bannerImageAdGroupId==='string'?config.ads.bannerImageAdGroupId.trim():'',
+      bannerAdGroupId: typeof config.ads.bannerAdGroupId==='string'?config.ads.bannerAdGroupId.trim():'',
       rewardedAdGroupId: typeof config.ads.rewardedAdGroupId==='string'?config.ads.rewardedAdGroupId.trim():'',
     }) });
   })().catch(error => { pending = undefined; throw error; });
