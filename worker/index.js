@@ -1,8 +1,10 @@
+import {handleFactory} from './factory.js';
 import {handleBM} from './bm.js';
 import {handleMissions} from './missions.js';
 import { publicAdConfig } from './config.js';
 // Mission writes require a verified Toss anonymous session and server-derived attendance.
 const requiredTables = [
+  'tree_factory_items','tree_factory_collection','tree_factory_requests','tree_factory_ledger','tree_factory_layout','tree_factory_payments','tree_factory_imports',
   'tree_bm_slots', 'tree_bm_requests', 'tree_bm_credits', 'tree_bm_payments',
   'tree_users', 'tree_sessions', 'tree_trees', 'tree_cycles',
   'tree_ad_completions', 'tree_attendance', 'tree_settlements',
@@ -11,6 +13,8 @@ const requiredTables = [
 ];
 export default {
   async fetch(request, env, context) {
+    const factoryResponse = await handleFactory(request, env);
+    if (factoryResponse) return factoryResponse;
     const bmResponse = await handleBM(request, env);
     if (bmResponse) return bmResponse;
     const missionResponse = await handleMissions(request, env, context);

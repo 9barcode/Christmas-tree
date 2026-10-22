@@ -17,7 +17,7 @@ async function decodeImage(img){if(img.decode)await img.decode();else if(!img.co
 try {
   await waitForHomeReady([
     // Module resolves only after state restore, manifest validation, current tree and earned decorations render.
-    ()=>import('./bm-home.js'),
+    ()=>import('./factory-home.js'),
     ()=>Promise.all([...home.querySelectorAll('img')].map(decodeImage)),
   ]);
   stage='홈 슬롯 이미지';
@@ -29,7 +29,7 @@ try {
   stop();home.inert=false;home.removeAttribute('aria-hidden');
   stopLoadingBanners();document.body.classList.remove('is-loading');splash.remove();window.dispatchEvent(new Event('tree:home-ready'));
   // Advertising is optional: it never blocks home readiness or loading recovery.
-  startHomeBanner();
+  // BM v3 keeps the tree scene and photos free of banners.
 } catch(error) {
   stopLoadingBanners();
   stop();copy.textContent='화면을 준비하지 못했어요. 다시 시도해 주세요.';

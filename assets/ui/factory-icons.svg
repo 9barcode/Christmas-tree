@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="tree" viewBox="0 0 32 32"><path fill="currentColor" d="m16 1 8 10h-4l7 9h-6l8 8H18v4h-4v-4H3l8-8H5l7-9H8z"/></symbol>
+<symbol id="factory" viewBox="0 0 32 32"><path fill="currentColor" d="M3 29V13l9 5V11l9 6V8h8v21zM23 2h4v5h-4z"/><path stroke="#243e31" stroke-width="3" d="M8 23v3m7-3v3m9-3v3"/></symbol>
+<symbol id="box" viewBox="0 0 32 32"><path fill="currentColor" d="m16 2 14 7-14 7L2 9zm-14 9 13 7v13L2 24zm15 7 13-7v13l-13 7z"/></symbol>
+<symbol id="book" viewBox="0 0 32 32"><path fill="currentColor" d="M2 4Q9 1 15 6v24Q9 25 2 28zm15 2q6-5 13-2v24q-7-3-13 2z"/><path stroke="#243e31" stroke-width="2" d="m5 10 7 1m-7 5 7 1m8-6 7-1m-7 7 7-1"/></symbol>
+</defs></svg>
