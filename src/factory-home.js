@@ -1,6 +1,7 @@
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
 import {factoryCall,factoryAd,factoryDebugAd,recoverFactoryAd} from './factory-client.js';
+import {startHomeBanner} from './banner.js';
 import {catalog,byId,kstDate,productionBlockReason,defaultFactoryCatalog,drawCatalog} from './factory-model.js';
 import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth,sanitizePositions} from './placement.js';
 import {planterClipPath,clipPlanter} from './planter.js';
@@ -204,7 +205,7 @@ function showShare(){
 }
 
 const motion=pageEffects(async()=>{const fire=await startCozyFire($('.fire'),$('.room'));const snow=startCozySnow($('.snow'));return()=>{fire();snow();};},{onError:console.error});
-await load();await render();await motion.start();setPage('tree');
+await load();await render();await motion.start();setPage('tree');startHomeBanner();
 let lastDate=snapshot.date;
 async function reconnect(){if(preview||busy||document.hidden)return;await run(async()=>{await recoverFactoryAd();snapshot=await factoryCall('recover',{});await render();lastDate=snapshot.date;});}
 window.addEventListener('tree:home-ready',reconnect);window.addEventListener('focus',reconnect);document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('factory-paused',document.hidden);if(!document.hidden)reconnect();});
