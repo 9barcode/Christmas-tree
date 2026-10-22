@@ -12,7 +12,7 @@ function initialize(sdk){
 }
 
 // One inline SDK-owned slot: no refresh timers, rewards, or fake ad markup.
-export function createBanner({region,target,configKey='bannerTextAdGroupId',loadConfig=loadServiceConfig,loadSdk=()=>import('./native-banner.js').then(m=>m.TossAds)}){
+export function createBanner({region,target,configKey='bannerTextAdGroupId',variant='expanded',loadConfig=loadServiceConfig,loadSdk=()=>import('./native-banner.js').then(m=>m.TossAds)}){
  let generation=0,attached=null,timer=null;
  const destroy=slot=>{try{slot?.destroy()}catch{/* Optional advertising must not interrupt the home. */}};
  function stop(){generation++;clearTimeout(timer);timer=null;const old=attached;attached=null;destroy(old);region.hidden=true;target.replaceChildren()}
@@ -28,7 +28,7 @@ export function createBanner({region,target,configKey='bannerTextAdGroupId',load
    // SDK needs a measurable, empty, full-width container before attachment.
    region.hidden=false;
    timer=setTimeout(fail,15000);
-   handle=sdk.attachBanner(adGroupId,target,{theme:'light',tone:'blackAndWhite',variant:'expanded',callbacks:{
+   handle=sdk.attachBanner(adGroupId,target,{theme:'light',tone:'blackAndWhite',variant,callbacks:{
     onAdRendered:()=>{if(current()&&!failed){clearTimeout(timer);timer=null;}},
     onNoFill:fail,onAdFailedToRender:fail
    }});
@@ -55,9 +55,24 @@ export function startHomeBanner(){
  if(new URLSearchParams(location.search).get('preview')==='1')return;
  const region=document.querySelector('body > .banner-region'),target=region?.querySelector('.banner-target');
  if(!region||!target)return;
- const banner=createBanner({region,target,configKey:'bannerAdGroupId'});
- const start=()=>{banner.start().catch(()=>banner.stop())};
- window.addEventListener('pagehide',()=>banner.stop());
- window.addEventListener('pageshow',event=>{if(event.persisted)start()});
+ region.classList.add('page-banner');
+ target.id ||= 'page-banner-target';
+ const place=()=>{
+  const home=document.querySelector('.home'),shell=document.querySelector('.factory-shell');
+  if(document.body.dataset.page==='tree'&&home)home.after(region);
+  else if(shell)shell.after(region);
+ };
+ place();
+ const banner=createBanner({region,target,configKey:'bannerAdGroupId',variant:'card'});
+ const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
+  const covered=entries.some(entry=>entry.isIntersecting);
+  document.querySelector('.tree-utilities')?.classList.toggle('banner-in-view',covered);
+  document.querySelector('.debug-launch-button')?.classList.toggle('banner-in-view',covered);
+ },{threshold:.1}):null;
+ observer?.observe(region);
+ const start=()=>{place();banner.start().catch(()=>banner.stop())};
+ const stop=()=>{observer?.disconnect();banner.stop()};
+ window.addEventListener('pagehide',stop,{once:true});
+ window.addEventListener('pageshow',event=>{if(event.persisted){observer?.observe(region);start()}});
  start();
 }

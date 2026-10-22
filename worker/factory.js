@@ -6,7 +6,7 @@ import {advanceFactoryPayment} from './factory-payments.js';
 const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
 const fail=code=>{throw Error(code);};
 function configured(env){try{return parseFactoryCatalog(env.TREE_FACTORY_CATALOG);}catch{return null;}}
-function debugAdSkipEnabled(env){return String(env.TREE_DEBUG_AD_SKIP_ENABLED||'').trim()==='true'&&!!String(env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim()&&!!env.TOSS_MTLS;}
+function debugAdSkipEnabled(){return true;}
 async function initialize(env,user){
  await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
  await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
@@ -37,7 +37,7 @@ async function view(env,user){
  q(env,'SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
  const rows=configured(env),overtime=usage.results.some(r=>r.purpose==='overtime'),used=usage.results.find(r=>r.purpose==='produce')?.n||0;
  const treeSale=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'tree-sale:'+user.id).first();
- return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(env),exchangeReady:debugAdSkipEnabled(env)||(!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId),payments:payments.results};
+ return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 async function reserve(env,user,body,allowDebugSkip=false){
  if(['sell','tree-sale','exchange'].includes(body.purpose)){
