@@ -6,7 +6,7 @@ import {advanceFactoryPayment} from './factory-payments.js';
 const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
 const fail=code=>{throw Error(code);};
 function configured(env){try{return parseFactoryCatalog(env.TREE_FACTORY_CATALOG);}catch{return null;}}
-function debugAdSkipEnabled(env){return String(env.TREE_DEBUG_AD_SKIP_ENABLED||'').trim()==='true'&&!!String(env.TREE_DEBUG_PROMOTION_CODE||'').trim()&&!!env.TOSS_MTLS;}
+function debugAdSkipEnabled(env){return String(env.TREE_DEBUG_AD_SKIP_ENABLED||'').trim()==='true'&&!!String(env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim()&&!!env.TOSS_MTLS;}
 async function initialize(env,user){
  await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
  await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
@@ -144,7 +144,7 @@ async function sellTree(env,user,body){
 }
 async function exchange(env,user,body){
  const debugTest=body.debugTest===true;
- const mode=debugTest?'test':String(env.TOSS_PROMOTION_MODE||'live'),raw=String(debugTest?env.TREE_DEBUG_PROMOTION_CODE:env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim();
+ const mode=debugTest?'test':String(env.TOSS_PROMOTION_MODE||'live'),raw=String(env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim();
  if(debugTest&&!debugAdSkipEnabled(env))fail('debug_ad_skip_disabled');
  if(!['live','test'].includes(mode)||!raw||!env.TOSS_MTLS||(mode==='live'&&raw.startsWith('TEST_')))fail('exchange_not_configured');
  const active=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? AND state NOT IN ('succeeded','failed')",user.id).first();
