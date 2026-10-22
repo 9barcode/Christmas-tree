@@ -23,6 +23,7 @@ const read = (env,user,id) => env.DB.prepare('SELECT * FROM tree_factory_payment
 async function finalize(env,user,payment) {
   if (!payment || !['succeeded','failed'].includes(payment.state)) return;
   // Wallet debit was reserved atomically. Test success releases it; live success consumes it.
+  if (payment.debug_test === 1 && payment.state === 'succeeded') return;
   if (payment.mode !== 'test' && payment.state !== 'failed') return;
   await env.DB.prepare("INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) VALUES(?,?,?,'test-refund',?) ON CONFLICT DO NOTHING")
     .bind('refund:'+payment.id,user.id,payment.amount,Date.now()).run();
