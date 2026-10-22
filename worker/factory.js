@@ -64,8 +64,9 @@ async function reserve(env,user,body,allowDebugSkip=false){
  const id=crypto.randomUUID(),date=kstDate(),expires=Date.now()+600000;
  const used="(SELECT count(*) FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='produce' AND state='completed')";
  const overtime="EXISTS(SELECT 1 FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='overtime' AND state='completed')";
- const gate=body.purpose==='produce'? `${used}<CASE WHEN ${overtime} THEN 20 ELSE 10 END`:`${used}>=10 AND NOT ${overtime}`;
- const result=await q(env,`INSERT INTO tree_factory_requests(id,user_id,purpose,date,ad_group_id,expires_at) SELECT ?,?,?,?,?,? WHERE ${gate} ON CONFLICT DO NOTHING`,id,user.id,body.purpose,date,ad,expires,user.id,date,user.id,date).run();
+ const gate=body.purpose==='produce'? `(?=1 OR ${used}<CASE WHEN ${overtime} THEN 20 ELSE 10 END)`:`${used}>=10 AND NOT ${overtime}`;
+ const gateArgs=body.purpose==='produce'?[debugSkip?1:0,user.id,date,user.id,date]:[user.id,date,user.id,date];
+ const result=await q(env,`INSERT INTO tree_factory_requests(id,user_id,purpose,date,ad_group_id,expires_at) SELECT ?,?,?,?,?,? WHERE ${gate} ON CONFLICT DO NOTHING`,id,user.id,body.purpose,date,ad,expires,...gateArgs).run();
  if(result.meta.changes!==1)fail('daily_limit');return {requestId:id,adGroupId:ad,expiresAt:expires};
 }
 async function finish(env,user,body,allowDebugSkip=false){

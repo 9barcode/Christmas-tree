@@ -11,9 +11,10 @@ export const defaultFactoryCatalog=catalog.map(a=>{
  return {id:a.id,value,weight:{1:245,2:180,3:126}[value]};
 });
 export const kstDate=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-export function productionBlockReason(state){
+export function productionBlockReason(state,debugMode=false){
  if(state.productionReady)return '';
  if(!state.catalog?.length||state.catalog.some(row=>![1,2,3].includes(row.value)))return '장식별 판매 금액과 등장 확률 설정이 아직 완료되지 않았어요. 준비가 끝나면 광고를 보고 장식을 생산할 수 있어요.';
+ if(debugMode&&state.debugAdSkipEnabled)return '';
  return '생산 광고 연결이 아직 준비되지 않았어요. 잠시 후 다시 확인해 주세요.';
 }
 export function parseFactoryCatalog(raw=JSON.stringify(defaultFactoryCatalog)){
