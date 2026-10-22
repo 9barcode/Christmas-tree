@@ -8,6 +8,7 @@ const fail=code=>{throw Error(code);};
 function configured(env){try{return parseFactoryCatalog(env.TREE_FACTORY_CATALOG);}catch{return null;}}
 async function initialize(env,user){
  await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
+ await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
  await q(env,'INSERT INTO tree_factory_layout(user_id) VALUES(?) ON CONFLICT DO NOTHING',user.id).run();
  const imported=await q(env,'SELECT user_id FROM tree_factory_imports WHERE user_id=?',user.id).first();
  if(!imported){
@@ -38,39 +39,68 @@ async function view(env,user){
  return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),collectionReward:!!reward,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE,payments:payments.results};
 }
 async function reserve(env,user,body){
+ if(['sell','exchange'].includes(body.purpose)){
+  const ad=publicAdConfig(env)[body.purpose==='sell'?'interstitialAdGroupId':'rewardedAdGroupId'];if(!ad)fail('ad_not_configured');
+  let itemId=null;
+  if(body.purpose==='sell'){
+   if(typeof body.itemId!=='string')fail('invalid_request');
+   const item=await q(env,'SELECT id FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0',body.itemId,user.id).first();if(!item)fail('item_unavailable');
+   itemId=item.id;
+  }else{
+   const balance=await q(env,'SELECT COALESCE(sum(amount),0) AS n FROM tree_factory_ledger WHERE user_id=?',user.id).first();if(balance.n<1)fail('exchange_empty');
+  }
+  const id=crypto.randomUUID(),date=kstDate(),now=Date.now(),expires=now+600000;
+  const result=await q(env,"INSERT INTO tree_factory_ad_gates(id,user_id,purpose,item_id,date,ad_group_id,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",id,user.id,body.purpose,itemId,date,ad,expires,now).run();
+  if(result.meta.changes!==1)fail('ad_in_progress');return {requestId:id,purpose:body.purpose,itemId,adGroupId:ad,expiresAt:expires};
+ }
  if(!['produce','overtime'].includes(body.purpose))fail('invalid_request');
  if(!configured(env))fail('catalog_not_configured');
  const ad=publicAdConfig(env).rewardedAdGroupId;if(!ad)fail('ad_not_configured');
  const id=crypto.randomUUID(),date=kstDate(),expires=Date.now()+600000;
  const used="(SELECT count(*) FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='produce' AND state='completed')";
  const overtime="EXISTS(SELECT 1 FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='overtime' AND state='completed')";
- const gate=body.purpose==='produce'?`${used}<CASE WHEN ${overtime} THEN 20 ELSE 10 END`:`${used}>=10 AND NOT ${overtime}`;
+ const gate=body.purpose==='produce'? `${used}<CASE WHEN ${overtime} THEN 20 ELSE 10 END`:`${used}>=10 AND NOT ${overtime}`;
  const result=await q(env,`INSERT INTO tree_factory_requests(id,user_id,purpose,date,ad_group_id,expires_at) SELECT ?,?,?,?,?,? WHERE ${gate} ON CONFLICT DO NOTHING`,id,user.id,body.purpose,date,ad,expires,user.id,date,user.id,date).run();
  if(result.meta.changes!==1)fail('daily_limit');return {requestId:id,adGroupId:ad,expiresAt:expires};
 }
 async function finish(env,user,body){
+ const adGate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE user_id=? AND id=?',user.id,body.requestId).first();
+ if(adGate){
+  if(['completed','consumed'].includes(adGate.state))return {requestId:adGate.id,purpose:adGate.purpose};
+  if(adGate.state!=='reserved'||adGate.date!==kstDate()||adGate.expires_at<=Date.now())fail('request_expired');
+  const valid=adGate.purpose==='sell'?body.eventType==='dismissed'&&body.rewarded!==true:body.eventType==='userEarnedReward'&&body.rewarded===true;
+  if(body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true)fail('ad_not_completed');
+  const now=Date.now();const result=await q(env,"UPDATE tree_factory_ad_gates SET state='completed',completed_at=? WHERE id=? AND user_id=? AND state='reserved' AND expires_at>?",now,adGate.id,user.id,now).run();
+  if(result.meta.changes!==1)fail('request_expired');
+  return {requestId:adGate.id,purpose:adGate.purpose};
+ }
  const r=await q(env,'SELECT * FROM tree_factory_requests WHERE user_id=? AND id=?',user.id,body.requestId).first();
  if(!r)fail('request_not_found');if(r.state==='completed')return {itemId:r.result_id};
  if(r.state!=='reserved'||r.date!==kstDate()||r.expires_at<=Date.now())fail('request_expired');
  if(body.adGroupId!==r.ad_group_id||body.eventType!=='userEarnedReward'||body.rewarded!==true||body.displayed!==true||body.dismissed!==true)fail('ad_not_completed');
  const now=Date.now(),rows=configured(env);if(!rows)fail('catalog_not_configured');
  const draw=r.purpose==='produce'?drawCatalog(rows):null;
- // The conditional update wins once; all following inserts derive from its stored result in the same transaction.
  const id=draw?crypto.randomUUID():null;
  const ops=[q(env,"UPDATE tree_factory_requests SET state='completed',completed_at=?,result_id=? WHERE id=? AND user_id=? AND state='reserved' AND expires_at>?",now,id,r.id,user.id,now)];
  if(draw){
- ops.push(q(env,`INSERT INTO tree_factory_items(id,user_id,asset_id,value,source,created_at) SELECT result_id,user_id,?,?,id,? FROM tree_factory_requests WHERE id=? AND user_id=? AND state='completed' AND result_id=? ON CONFLICT DO NOTHING`,draw.id,draw.value,now,r.id,user.id,id));
- ops.push(q(env,`INSERT INTO tree_factory_collection(user_id,asset_id,created_at) SELECT user_id,asset_id,? FROM tree_factory_items WHERE source=? ON CONFLICT DO NOTHING`,now,r.id));
+  ops.push(q(env,`INSERT INTO tree_factory_items(id,user_id,asset_id,value,source,created_at) SELECT result_id,user_id,?,?,id,? FROM tree_factory_requests WHERE id=? AND user_id=? AND state='completed' AND result_id=? ON CONFLICT DO NOTHING`,draw.id,draw.value,now,r.id,user.id,id));
+  ops.push(q(env,`INSERT INTO tree_factory_collection(user_id,asset_id,created_at) SELECT user_id,asset_id,? FROM tree_factory_items WHERE source=? ON CONFLICT DO NOTHING`,now,r.id));
  }
  await env.DB.batch(ops);
  const saved=await q(env,'SELECT result_id FROM tree_factory_requests WHERE id=? AND user_id=?',r.id,user.id).first();return {itemId:saved.result_id};
 }
 async function sell(env,user,body){
- if(typeof body.itemId!=='string')fail('invalid_request');
+ if(typeof body.itemId!=='string'||typeof body.adRequestId!=='string')fail('invalid_request');
+ const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
+ if(!gate||gate.purpose!=='sell'||gate.item_id!==body.itemId||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
+ const item=await q(env,'SELECT id FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0',body.itemId,user.id).first();if(!item)fail('item_unavailable');
+ const now=Date.now();
  await env.DB.batch([
- q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT 'sale:'||id,user_id,value,'sale',? FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0 ON CONFLICT DO NOTHING`,Date.now(),body.itemId,user.id),
- q(env,"UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id='sale:'||tree_factory_items.id)",Date.now(),body.itemId,user.id),
- q(env,'UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?',user.id)]);
+  q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT 'sale:'||id,user_id,value,'sale',? FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0 ON CONFLICT DO NOTHING`,now,body.itemId,user.id),
+  q(env,"UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id='sale:'||tree_factory_items.id)",now,body.itemId,user.id),
+  q(env,'UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?',user.id),
+  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed'",gate.id,user.id)
+ ]);
 }
 async function place(env,user,body){
  if(!Number.isSafeInteger(body.revision)||!Array.isArray(body.items)||body.items.length>30||new Set(body.items.map(i=>i.id)).size!==body.items.length)fail('invalid_request');
@@ -90,11 +120,14 @@ async function exchange(env,user,body){
  if(!['live','test'].includes(mode)||!raw||!env.TOSS_MTLS||(mode==='live'&&raw.startsWith('TEST_')))fail('exchange_not_configured');
  const active=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? AND state NOT IN ('succeeded','failed')",user.id).first();
  if(active){await advanceFactoryPayment(env,user,active.id);return;}
- if(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9]{16,80}$/.test(body.requestId))fail('invalid_request');
+ if(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9]{16,80}$/.test(body.requestId)||typeof body.adRequestId!=='string')fail('invalid_request');
+ const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
+ if(!gate||gate.purpose!=='exchange'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
  const id=user.id+':'+body.requestId,now=Date.now();
  await env.DB.batch([
- q(env,`INSERT INTO tree_factory_payments(id,user_id,mode,promotion_code,amount,state,created_at,updated_at) SELECT ?,?,?,?,sum(amount),'creating',?,? FROM tree_factory_ledger WHERE user_id=? HAVING sum(amount)>0 ON CONFLICT DO NOTHING`,id,user.id,mode,mode==='test'&&!raw.startsWith('TEST_')?'TEST_'+raw:raw,now,now,user.id),
- q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT 'exchange:'||id,user_id,-amount,'exchange',? FROM tree_factory_payments WHERE id=? ON CONFLICT DO NOTHING`,now,id)]);
+ q(env,`INSERT INTO tree_factory_payments(id,user_id,mode,promotion_code,amount,state,created_at,updated_at) SELECT ?,?,?,?,sum(amount),'creating',?,? FROM tree_factory_ledger WHERE user_id=? AND EXISTS(SELECT 1 FROM tree_factory_ad_gates WHERE id=? AND user_id=? AND purpose='exchange' AND state='completed') HAVING sum(amount)>0 ON CONFLICT DO NOTHING`,id,user.id,mode,mode==='test'&&!raw.startsWith('TEST_')?'TEST_'+raw:raw,now,now,user.id,body.adRequestId,user.id),
+ q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT 'exchange:'||id,user_id,-amount,'exchange',? FROM tree_factory_payments WHERE id=? ON CONFLICT DO NOTHING`,now,id),
+ q(env,`UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=?)`,body.adRequestId,user.id,id,user.id)]);
  const saved=await q(env,'SELECT id FROM tree_factory_payments WHERE id=? AND user_id=?',id,user.id).first();if(saved)await advanceFactoryPayment(env,user,saved.id);
 }
 export async function handleFactory(request,env){
@@ -109,7 +142,7 @@ export async function handleFactory(request,env){
  await initialize(env,user);if(route==='state')return reply(await view(env,user));const body=await bodyOf(request);
  if(route==='ads/reserve')return reply(await reserve(env,user,body));
  if(route==='ads/complete')return reply(await finish(env,user,body));
- if(route==='ads/cancel')await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();
+ if(route==='ads/cancel'){await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();}
  if(route==='sell')await sell(env,user,body);
  if(route==='layout')await place(env,user,body);
  if(route==='claim')await q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,30,'collection',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'collection:'+user.id,user.id,Date.now(),user.id).run();
@@ -119,5 +152,5 @@ export async function handleFactory(request,env){
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['invalid_request','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
