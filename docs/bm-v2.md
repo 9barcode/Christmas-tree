@@ -43,7 +43,7 @@
 
 광고 미지원·설정 누락·로드 실패·표시 실패·표시 전 종료·타임아웃에는 슬롯 해제, 장식 증가, 지급 요청을 진행하지 않는다. 광고 생략/bypass를 성공으로 취급하지 않는다. 광고 클릭은 지급 조건이 아니다. 광고를 연속 자동 재생하지 않고 사용자 동작마다 한 번만 호출한다.
 
-광고 변수는 총 4개다. `INTERSTITIAL_AD_GROUP_ID`(장식 획득), `REWARDED_AD_GROUP_ID`(트리 추가·포인트 교환), `BANNER_TEXT_AD_GROUP_ID`(문구형 배너), `BANNER_IMAGE_AD_GROUP_ID`(이미지형 배너)를 사용한다. 화면·트리 슬롯별로 나누지 않는다. 리워드 ID에 전면형 ID를 대신 넣지 않는다.
+광고 변수는 총 4개다. `INTER_AD_GROUP_ID`(장식 획득), `REWARDED_AD_GROUP_ID`(트리 추가·포인트 교환), `BANNER_TEXT_AD_GROUP_ID`(문구형 배너), `BANNER_IMAGE_AD_GROUP_ID`(이미지형 배너)를 사용한다. 화면·트리 슬롯별로 나누지 않는다. 리워드 ID에 전면형 ID를 대신 넣지 않는다.
 
 ## 3. 일일 한도와 완성 보상
 

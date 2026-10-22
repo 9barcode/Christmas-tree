@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs';
 import {publicAdConfig} from '../worker/config.js';
 
 test('ad IDs are mapped from runtime variables without fallback literals',()=>{
- const values={INTERSTITIAL_AD_GROUP_ID:' interstitial-runtime ',BANNER_TEXT_AD_GROUP_ID:' text-runtime ',BANNER_IMAGE_AD_GROUP_ID:' image-runtime ',REWARDED_AD_GROUP_ID:' rewarded-runtime '};
+ const values={INTER_AD_GROUP_ID:' interstitial-runtime ',BANNER_TEXT_AD_GROUP_ID:' text-runtime ',BANNER_IMAGE_AD_GROUP_ID:' image-runtime ',REWARDED_AD_GROUP_ID:' rewarded-runtime '};
  const config=publicAdConfig(values);
  assert.deepEqual(config,{interstitialAdGroupId:'interstitial-runtime',bannerTextAdGroupId:'text-runtime',bannerImageAdGroupId:'image-runtime',rewardedAdGroupId:'rewarded-runtime'});
  assert.deepEqual(publicAdConfig({}),{interstitialAdGroupId:'',bannerTextAdGroupId:'',bannerImageAdGroupId:'',rewardedAdGroupId:''});
- assert.equal(publicAdConfig({INTERSTITIAL_AD_GROUP_ID:123}).interstitialAdGroupId,'');
+ assert.equal(publicAdConfig({INTER_AD_GROUP_ID:123}).interstitialAdGroupId,'');
 });
 test('deploy preserves dashboard variables and never overrides ad IDs from source',()=>{
  const config=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8'));assert.equal(config.keep_vars,true);
@@ -17,7 +17,7 @@ test('deploy preserves dashboard variables and never overrides ad IDs from sourc
 test('client reads runtime config including the optional interstitial field',async()=>{
  const original=globalThis.fetch;let calls=0;
  try{
-  globalThis.fetch=async()=>{calls++;return {ok:true,json:async()=>({ads:publicAdConfig({INTERSTITIAL_AD_GROUP_ID:' new-runtime-id '})})}};
+  globalThis.fetch=async()=>{calls++;return {ok:true,json:async()=>({ads:publicAdConfig({INTER_AD_GROUP_ID:' new-runtime-id '})})}};
   const {loadServiceConfig}=await import('../src/service-config.js?runtime-config-test');
   assert.equal((await loadServiceConfig()).ads.interstitialAdGroupId,'new-runtime-id');await loadServiceConfig();assert.equal(calls,1);
   globalThis.fetch=async()=>({ok:true,json:async()=>({ads:{}})});

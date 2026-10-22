@@ -1,5 +1,5 @@
 # Local Worker values only. Actual values belong in .dev.vars (ignored by git).
-INTERSTITIAL_AD_GROUP_ID=
+INTER_AD_GROUP_ID=
 REWARDED_AD_GROUP_ID=
 BANNER_TEXT_AD_GROUP_ID=
 BANNER_IMAGE_AD_GROUP_ID=

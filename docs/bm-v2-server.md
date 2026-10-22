@@ -2,7 +2,7 @@
 
 기존 `/api/auth/anonymous` 세션의 Bearer 토큰을 사용한다. 신규 데이터는 `tree_bm_` 테이블에만 기록한다. 기존 출석·미션 API와 원장은 구버전 복구를 위해 유지하며 신규 클라이언트에서 호출하지 않는다. 기존 로컬 기록의 소급 적립이나 슬롯 이관은 수행하지 않는다.
 
-광고 변수는 `INTERSTITIAL_AD_GROUP_ID`, `REWARDED_AD_GROUP_ID`, `BANNER_TEXT_AD_GROUP_ID`, `BANNER_IMAGE_AD_GROUP_ID` 네 개다. `/api/config`는 이미 해당 형식을 제공한다. 슬롯별 광고 ID는 사용하지 않는다.
+광고 변수는 `INTER_AD_GROUP_ID`, `REWARDED_AD_GROUP_ID`, `BANNER_TEXT_AD_GROUP_ID`, `BANNER_IMAGE_AD_GROUP_ID` 네 개다. `/api/config`는 이미 해당 형식을 제공한다. 슬롯별 광고 ID는 사용하지 않는다.
 
 | API | 내용 |
 | --- | --- |
