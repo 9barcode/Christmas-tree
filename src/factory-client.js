@@ -14,7 +14,7 @@ export async function factoryAd(purpose,details={}){
  try{
  localStorage.setItem(key,JSON.stringify(r));
  const {showNativeRewarded,showNativeInterstitial}=await import('./native-promotions.js');
- const showAd=['sell','tree-sale'].includes(purpose)?showNativeInterstitial:showNativeRewarded;
+ const showAd=['sell','tree-sale','produce'].includes(purpose)?showNativeInterstitial:showNativeRewarded;
  proof={requestId:r.requestId,...await showAd({adGroupId:r.adGroupId})};
  localStorage.setItem(key,JSON.stringify({...r,proof}));
  const result=await factoryCall('ads/complete',proof);localStorage.removeItem(key);return result;
