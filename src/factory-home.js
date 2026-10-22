@@ -126,22 +126,22 @@ function renderPage(){
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 배치한 장식을 판매하면 트리에서도 회수돼요.'));
 }
 function renderFactory(){
- const stopped=snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
+ const stopped=!debugMode&&snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
  scene.setAttribute('aria-label','시안 원본의 산타 장식 공장');
  const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.png';painting.alt='';painting.draggable=false;
  const canvas=node('canvas','factory-scene-motion');canvas.setAttribute('aria-hidden','true');
  scene.append(painting,canvas,node('div','workshop-light'));shell.append(scene);
  stopFactoryScene=startFactoryScene(canvas,painting,()=>scene.classList.contains('stopped'),()=>scene.classList.contains('producing'));
- const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));
- const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
+ const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${debugMode?'무제한':snapshot.limit}`));
+ const progress=node('progress','factory-production-progress');progress.max=debugMode?Math.max(1,snapshot.used):snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
  const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
- const unavailable=!preview&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
- const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
+ const unavailable=!preview&&!!productionBlockReason(snapshot,debugMode);panel.classList.toggle('is-unavailable',unavailable);
+ const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':debugMode?'디버그 모드 · 생산 횟수 무제한':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
  const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):button('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
  b.disabled=busy;
- overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));shell.append(overtime);
+ overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));if(!debugMode)shell.append(overtime);
  if(preview){const notice=node('p','preview-notice','미리보기 · 광고/지급은 실제로 실행되지 않아요.');shell.append(notice);}
 }
 async function requestOvertime(){
@@ -150,16 +150,16 @@ async function requestOvertime(){
  if(snapshot.overtime)reasons.push('오늘 야근수당은 이미 지급했어요. 야근은 하루 한 번만 가능하며, 한국시간 자정에 다시 이용할 수 있어요.');
  else{
   if(snapshot.used<10)reasons.push(`기본 생산 10회를 모두 마치면 야근할 수 있어요. 지금은 ${snapshot.used}회 생산했고, ${10-snapshot.used}회 남았어요.`);
-  const setupReason=!preview&&productionBlockReason(snapshot);if(setupReason)reasons.push(setupReason);
+  const setupReason=!preview&&productionBlockReason(snapshot,debugMode);if(setupReason)reasons.push(setupReason);
  }
  if(reasons.length){const content=node('div');reasons.forEach(reason=>content.append(node('p','',reason)));content.append(button('확인',()=>$('dialog').close()));modal('야근수당 안내',content);return;}
  await run(async()=>{if(preview){if(!allowDebugAdSkip())return;previewState.overtime=true;previewState.limit=20;await load();}else{if(debugAdsSkipped)await factoryDebugAd('overtime');else await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');});
 }
 async function produceItem(){
- const reason=!preview&&productionBlockReason(snapshot);
+ const reason=!preview&&productionBlockReason(snapshot,debugMode);
  if(reason){const content=node('div');content.append(node('p','',reason),button('확인',()=>$('dialog').close()));modal('공장 생산 준비 중',content);return;}
  await run(async()=>{
- let result;if(preview){if(!allowDebugAdSkip())return;rollover();if(previewState.used>=previewState.limit)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=debugAdsSkipped?await factoryDebugAd('produce'):await factoryAd('produce');
+ let result;if(preview){if(!allowDebugAdSkip())return;rollover();if(!debugMode&&previewState.used>=previewState.limit)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=debugAdsSkipped?await factoryDebugAd('produce'):await factoryAd('produce');
  await load();renderPage();const scene=$('.workshop');scene?.classList.remove('stopped');scene?.classList.add('producing');const produced=snapshot.items.find(i=>i.id===result.itemId);if(produced&&scene){const reveal=art(byId[produced.asset_id]);reveal.className='revealed-ornament';scene.append(reveal);}const skip=button('연출 건너뛰기',()=>{},'skip-production');skip.disabled=false;shell.append(skip);
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
  const item=snapshot.items.find(i=>i.id===result.itemId);if(item)showItem(byId[item.asset_id],[item],true);
@@ -167,7 +167,7 @@ async function produceItem(){
 function showItem(a,owned,fresh=false,chosenId=null){
  const c=node('div','item-detail');c.append(art(a),node('p','',fresh?'새 장식이 도착했어요! 도감에 등록했어요.':`보유 ${owned.length}개 · 트리 배치 ${owned.filter(i=>i.placed).length}개`));
  const item=owned.find(i=>i.id===chosenId)||(selling?owned.find(i=>i.value>0):null)||owned.find(i=>!i.placed)||owned[0];if(owned.length>1){const select=node('select','instance-picker');select.setAttribute('aria-label','사용할 장식 선택');owned.forEach((i,index)=>{const o=node('option','',`${index+1}번째 · ${i.value?i.value+'원':'기존 장식'} · ${i.placed?'배치 중':'보관 중'}`);o.value=i.id;o.selected=i.id===item.id;select.append(o);});select.onchange=()=>showItem(a,owned,false,select.value);c.append(select);}c.append(node('p','',item.value?`판매 가치 ${item.value}원`:'기존 트리에서 보존한 장식 · 판매 대상 아님'));
- c.append(button('보관하기',()=>$('dialog').close()));
+ if(fresh)c.append(button('보관하기',()=>$('dialog').close()));
  const duplicatePlaced=!item.placed&&snapshot.items.some(i=>i.placed&&i.asset_id===item.asset_id);
  const placementButton=button(item.placed?'트리에서 회수하기':duplicatePlaced?'같은 장식은 이미 트리에 있어요':'트리에 배치하기',()=>run(async()=>{
  const current=snapshot.items.find(i=>i.id===item.id);if(!current)throw Error('장식 상태를 다시 확인해 주세요.');
