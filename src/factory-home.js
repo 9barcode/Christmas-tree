@@ -99,10 +99,21 @@ function renderFactory(){
  const produce=button(stopped?'오늘 생산을 모두 마쳤어요':unavailable?'생산 준비 상태 확인':'광고 보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
- const b=button(snapshot.overtime?'오늘 야근수당 지급 완료':'야근수당 주고 공장 재가동!',()=>run(async()=>{if(preview){previewState.overtime=true;previewState.limit=20;await load();}else{await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');}),'factory-button overtime-button');
- b.disabled=busy||!snapshot.productionReady||snapshot.used<10||snapshot.overtime;
+ const b=button(snapshot.overtime?'오늘 야근수당 지급 완료':'야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
+ b.disabled=busy;
  overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));shell.append(overtime);
  if(preview){const notice=node('p','preview-notice','디자인 미리보기 · 가격·확률은 예시 · 실제 광고/지급 없음');shell.append(notice);}
+}
+async function requestOvertime(){
+ if(busy)return;
+ const reasons=[];
+ if(snapshot.overtime)reasons.push('오늘 야근수당은 이미 지급했어요. 야근은 하루 한 번만 가능하며, 한국시간 자정에 다시 이용할 수 있어요.');
+ else{
+  if(snapshot.used<10)reasons.push(`기본 생산 10회를 모두 마치면 야근할 수 있어요. 지금은 ${snapshot.used}회 생산했고, ${10-snapshot.used}회 남았어요.`);
+  const setupReason=!preview&&productionBlockReason(snapshot);if(setupReason)reasons.push(setupReason);
+ }
+ if(reasons.length){const content=node('div');reasons.forEach(reason=>content.append(node('p','',reason)));content.append(button('확인',()=>$('dialog').close()));modal('야근수당 안내',content);return;}
+ await run(async()=>{if(preview){previewState.overtime=true;previewState.limit=20;await load();}else{await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');});
 }
 async function produceItem(){
  const reason=!preview&&productionBlockReason(snapshot);
