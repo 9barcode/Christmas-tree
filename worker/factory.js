@@ -35,17 +35,20 @@ async function view(env,user){
  q(env,'SELECT COALESCE(sum(amount),0) AS n FROM tree_factory_ledger WHERE user_id=?',user.id).first(),
  q(env,'SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
  const rows=configured(env),overtime=usage.results.some(r=>r.purpose==='overtime'),used=usage.results.find(r=>r.purpose==='produce')?.n||0;
- const reward=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'collection:'+user.id).first();
- return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),collectionReward:!!reward,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
+ const treeSale=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'tree-sale:'+user.id).first();
+ return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 async function reserve(env,user,body){
- if(['sell','exchange'].includes(body.purpose)){
-  const ad=publicAdConfig(env)[body.purpose==='sell'?'interstitialAdGroupId':'rewardedAdGroupId'];if(!ad)fail('ad_not_configured');
+ if(['sell','tree-sale','exchange'].includes(body.purpose)){
+  const ad=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];if(!ad)fail('ad_not_configured');
   let itemId=null;
   if(body.purpose==='sell'){
    if(typeof body.itemId!=='string')fail('invalid_request');
    const item=await q(env,'SELECT id FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0',body.itemId,user.id).first();if(!item)fail('item_unavailable');
    itemId=item.id;
+  }else if(body.purpose==='tree-sale'){
+   const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
+   const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
   }else{
    const balance=await q(env,'SELECT COALESCE(sum(amount),0) AS n FROM tree_factory_ledger WHERE user_id=?',user.id).first();if(balance.n<1)fail('exchange_empty');
   }
@@ -68,7 +71,7 @@ async function finish(env,user,body){
  if(adGate){
   if(['completed','consumed'].includes(adGate.state))return {requestId:adGate.id,purpose:adGate.purpose};
   if(adGate.state!=='reserved'||adGate.date!==kstDate()||adGate.expires_at<=Date.now())fail('request_expired');
-  const valid=adGate.purpose==='sell'?body.eventType==='dismissed'&&body.rewarded!==true:body.eventType==='userEarnedReward'&&body.rewarded===true;
+  const valid=adGate.purpose==='exchange'?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
   if(body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true)fail('ad_not_completed');
   const now=Date.now();const result=await q(env,"UPDATE tree_factory_ad_gates SET state='completed',completed_at=? WHERE id=? AND user_id=? AND state='reserved' AND expires_at>?",now,adGate.id,user.id,now).run();
   if(result.meta.changes!==1)fail('request_expired');
@@ -106,7 +109,8 @@ async function place(env,user,body){
  if(!Number.isSafeInteger(body.revision)||!Array.isArray(body.items)||body.items.length>30||new Set(body.items.map(i=>i.id)).size!==body.items.length)fail('invalid_request');
  const owned=(await q(env,'SELECT id,asset_id FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL',user.id).all()).results;
  const kinds=new Set();
- const clean=body.items.map(i=>{const a=byId[owned.find(o=>o.id===i.id)?.asset_id];if(!a)fail('item_unavailable');if(['lights','topper'].includes(a.kind)){if(kinds.has(a.kind))fail('fixed_item_duplicate');kinds.add(a.kind);}const p=['lights','topper'].includes(a.kind)?defaultPosition(a.kind):clampPosition(a.kind,i.x,i.y);if(!p)fail('invalid_request');return {...i,...p};});
+ const clean=body.items.map(i=>{const a=byId[owned.find(o=>o.id===i.id)?.asset_id];if(!a)fail('item_unavailable');if(['lights','topper'].includes(a.kind)){if(kinds.has(a.kind))fail('fixed_item_duplicate');kinds.add(a.kind);}const p=['lights','topper'].includes(a.kind)?defaultPosition(a.kind):clampPosition(a.kind,i.x,i.y);if(!p)fail('invalid_request');return {...i,...p,asset_id:a.id};});
+ if(new Set(clean.map(i=>i.asset_id)).size!==clean.length)fail('duplicate_decoration');
  const pot=clampPosition('pot',body.pot?.x,body.pot?.y);if(!pot)fail('invalid_request');
  // A request-scoped revision token gates every mutation, so stale tabs cannot clear a newer layout.
  const revision=body.revision+1,token=JSON.stringify({...pot,token:crypto.randomUUID()});
@@ -114,6 +118,17 @@ async function place(env,user,body){
  const ops=[q(env,'UPDATE tree_factory_layout SET revision=?,pot_json=? WHERE user_id=? AND revision=?',revision,token,user.id,body.revision),q(env,`UPDATE tree_factory_items SET placed=0 WHERE user_id=? AND ${gate}`,user.id,user.id,revision,token)];
  for(const i of clean)ops.push(q(env,`UPDATE tree_factory_items SET placed=1,x=?,y=? WHERE id=? AND user_id=? AND sold_at IS NULL AND ${gate}`,i.x,i.y,i.id,user.id,user.id,revision,token));
  const results=await env.DB.batch(ops);if(results[0].meta.changes!==1)fail('positions_conflict');
+}
+async function sellTree(env,user,body){
+ if(typeof body.adRequestId!=='string')fail('invalid_request');
+ const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
+ if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
+ const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
+ const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
+ await env.DB.batch([
+  q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,50,'tree_sale',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'tree-sale:'+user.id,user.id,Date.now(),user.id),
+  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed'",gate.id,user.id)
+ ]);
 }
 async function exchange(env,user,body){
  const mode=String(env.TOSS_PROMOTION_MODE||'live'),raw=String(env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim();
@@ -144,13 +159,13 @@ export async function handleFactory(request,env){
  if(route==='ads/complete')return reply(await finish(env,user,body));
  if(route==='ads/cancel'){await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();}
  if(route==='sell')await sell(env,user,body);
+ if(route==='claim')await sellTree(env,user,body);
  if(route==='layout')await place(env,user,body);
- if(route==='claim')await q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,30,'collection',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'collection:'+user.id,user.id,Date.now(),user.id).run();
  if(route==='exchange')await exchange(env,user,body);
  if(route==='recover'){
  const rows=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 5",user.id).all();
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
