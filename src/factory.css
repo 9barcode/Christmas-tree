@@ -49,3 +49,6 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .tree-utilities button:disabled{opacity:.65}
 .concept-factory .production-counter-label{position:absolute;left:-6%;top:-60%;width:112%;height:60%;display:flex;align-items:center;justify-content:center;border-radius:4px;background:linear-gradient(#f1d5a0,#efd09a);color:#442713;font-size:4.15cqw;line-height:1.2;white-space:nowrap}
 .concept-factory .production-panel.is-unavailable>.factory-button{background:linear-gradient(110deg,#477d4a,#33683e);color:#fff8e6;border:1px solid #396843}
+
+/* Preview debug control stays visible at the bottom, above the tab bar. */
+.debug-ad-panel{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom) + 8px);transform:translateX(-50%);z-index:62;width:min(92vw,500px);padding:10px 12px;background:#fff0cc;border:2px dashed #d3543c;border-radius:16px;text-align:center;color:#63331f;box-shadow:0 3px 10px #21140c77}.debug-ad-panel p{margin:0 0 7px;font-size:12px;line-height:1.35}.debug-ad-button{width:100%;border:1px solid #9d3025;border-radius:12px;padding:9px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;font:inherit;font-size:15px}.debug-ad-button[aria-pressed=true]{background:linear-gradient(#477d4a,#286545);border-color:#33613e}
