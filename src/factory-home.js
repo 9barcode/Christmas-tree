@@ -1,8 +1,8 @@
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
 import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
-import {catalog,byId,kstDate} from './factory-model.js';
-import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth} from './placement.js';
+import {catalog,byId,kstDate,productionBlockReason} from './factory-model.js';
+import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth,sanitizePositions} from './placement.js';
 import {planterClipPath,clipPlanter} from './planter.js';
 import {pageEffects} from './page-effects.js';
 import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
@@ -17,13 +17,16 @@ function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clear
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;}
 function button(text,fn,cls='factory-button'){const b=node('button',cls,text);b.type='button';b.disabled=busy;b.onclick=fn;return b;}
 function modal(title,content){if($('dialog').open)$('dialog').close();const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
-function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,dialog .factory-button').forEach(b=>b.disabled=value);}
+function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,.tree-utilities button,dialog .factory-button').forEach(b=>b.disabled=value);}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
-function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
+function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
 const share=button('사진 저장 · 공유',showShare,'photo-link');$('.home-links').append(share);
+const camera=node('img');camera.src='assets/ui/painted/camera.webp';camera.alt='';share.prepend(camera);
+const utilities=$('.home-links');utilities.classList.add('tree-utilities');document.body.append(utilities);
+new ResizeObserver(()=>document.documentElement.style.setProperty('--page-tabs-height',tabs.getBoundingClientRect().height+'px')).observe(tabs);
 $('.slots').hidden=true;$('.slots').replaceChildren();$('.home footer').hidden=true;
 $('.guide-link').onclick=()=>{const c=node('div');c.append(node('p','','광고를 보고 공장에서 장식을 만들어요. 보관함에서 배치하거나 판매할 수 있어요.'),node('p','','하루 기본 10회, 야근 광고를 보면 하루 한 번 10회를 더 생산해요. 생산할 때마다 광고를 시청해요.'),node('p','','최초 획득한 장식은 판매해도 도감에 남아요. 서로 다른 30종을 모으면 최초 1회 30원을 적립해요.'));modal('이용안내',c);};
 $('.rewards-link').onclick=()=>setPage('inventory');$('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
@@ -34,7 +37,8 @@ async function assetNode(path,className){
 }
 async function renderTree(){
  const tree=await assetNode('assets/trees/tree-green.png','tree'),pot=await assetNode('assets/planters/planter-wood.png','pot'),back=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
- bindDrag(pot,'pot',null,snapshot.pot?.x?snapshot.pot:defaultPosition('pot'),back);
+ snapshot.pot=sanitizePositions({__pot:snapshot.pot},[],0).__pot||defaultPosition('pot');
+ bindDrag(pot,'pot',null,snapshot.pot,back);
  const ornaments=[],floor=[];let oi=0,fi=0;
  for(const i of snapshot.items.filter(i=>i.placed)){
  const a=byId[i.asset_id];if(!a)continue;const n=await assetNode(a.path,a.kind==='floor'?'floor-item':'ornament '+(a.kind==='topper'?'topper':a.kind==='lights'?'lights':''));
@@ -47,7 +51,7 @@ async function renderTree(){
 }
 function bindDrag(n,kind,id,initial,back){let p=initial,drag;
  n.classList.add('draggable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label',id?`${byId[snapshot.items.find(i=>i.id===id)?.asset_id]?.name||'장식'} 위치 옮기기`:'화분 위치 옮기기');
- function paint(){for(const target of [n,back].filter(Boolean)){Object.assign(target.style,{width:OBJECT_SIZES[kind].w+'%',height:OBJECT_SIZES[kind].h+'%',left:p.x+'%',top:p.y+'%',transform:'translate(-50%,-50%)'});const z=floorDepth(kind,p.y);if(z!==null)target.style.zIndex=z;}}paint();
+ function paint(){for(const target of [n,back].filter(Boolean)){Object.assign(target.style,{width:OBJECT_SIZES[kind].w+'%',height:OBJECT_SIZES[kind].h+'%',left:p.x+'%',top:p.y+'%',transform:'translate(-50%,-50%)'});const z=target===back?0:floorDepth(kind,p.y);if(z!==null)target.style.zIndex=z;}}paint();
  n.onpointerdown=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},rect:$('.garden').getBoundingClientRect()};n.setPointerCapture(e.pointerId);n.classList.add('is-dragging');tabs.inert=true;};
  n.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;p=clampPosition(kind,drag.p.x+(e.clientX-drag.x)/drag.rect.width*100,drag.p.y+(e.clientY-drag.y)/drag.rect.height*100);paint();};
  function finish(e,cancel){if(!drag||drag.pointer!==e.pointerId)return;const start=drag.p;drag=null;n.classList.remove('is-dragging');tabs.inert=false;if(n.hasPointerCapture(e.pointerId))n.releasePointerCapture(e.pointerId);if(cancel){p=start;paint();return;}run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();await renderTree();});}
@@ -88,10 +92,11 @@ function renderFactory(){
  const canvas=node('canvas','factory-scene-motion');canvas.setAttribute('aria-hidden','true');
  scene.append(painting,canvas,node('div','workshop-light'));shell.append(scene);
  stopFactoryScene=startFactoryScene(canvas,painting,()=>scene.classList.contains('stopped'),()=>scene.classList.contains('producing'));
- const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('strong','',`${snapshot.used} / ${snapshot.limit}`));
+ const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));
  const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
  const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
- const produce=button(stopped?'오늘 생산을 모두 마쳤어요':'광고 보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped||(!preview&&!snapshot.productionReady);panel.append(produce,node('p','',snapshot.productionReady?`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`:'공장 오픈 준비 중이에요.'));shell.append(panel);
+ const unavailable=!preview&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
+ const produce=button(stopped?'오늘 생산을 모두 마쳤어요':unavailable?'생산 준비 상태 확인':'광고 보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
  const b=button(snapshot.overtime?'오늘 야근수당 지급 완료':'야근수당 주고 공장 재가동!',()=>run(async()=>{if(preview){previewState.overtime=true;previewState.limit=20;await load();}else{await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');}),'factory-button overtime-button');
@@ -99,7 +104,10 @@ function renderFactory(){
  overtime.append(b,node('small','',snapshot.overtime?(stopped?'오늘 생산 완료 · 내일 다시 만나요!':'추가 생산 10회 · 오늘 야근 중이에요'):(snapshot.used<10?'기본 생산 10회 완료 후 · 광고로 하루 1번 해제':'광고 시청 후 추가 생산 10회 · 하루 1번 가능해요.')));shell.append(overtime);
  if(preview){const notice=node('p','preview-notice','디자인 미리보기 · 가격·확률은 예시 · 실제 광고/지급 없음');shell.append(notice);}
 }
-async function produceItem(){await run(async()=>{
+async function produceItem(){
+ const reason=!preview&&productionBlockReason(snapshot);
+ if(reason){const content=node('div');content.append(node('p','',reason),button('확인',()=>$('dialog').close()));modal('공장 생산 준비 중',content);return;}
+ await run(async()=>{
  let result;if(preview){rollover();if(previewState.used>=previewState.limit)return;const a=catalog[previewState.used%30],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:1+catalog.indexOf(a)%3,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=await factoryAd('produce');
  await load();renderPage();const scene=$('.workshop');scene?.classList.remove('stopped');scene?.classList.add('producing');const produced=snapshot.items.find(i=>i.id===result.itemId);if(produced&&scene){const reveal=art(byId[produced.asset_id]);reveal.className='revealed-ornament';scene.append(reveal);}const skip=button('연출 건너뛰기',()=>{},'skip-production');skip.disabled=false;shell.append(skip);
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
@@ -117,7 +125,7 @@ function showItem(a,owned,fresh=false,chosenId=null){
  if(item.value>0)c.append(button(`1개 판매하기 · ${item.value}원`,()=>{const confirmation=node('div');confirmation.append(node('p','',`${a.name} 1개를 ${item.value}원에 판매할까요? 도감 기록은 유지돼요.${item.placed?' 트리에서도 회수돼요.':''}`),button('판매 확정',()=>run(async()=>{if(preview){const i=previewState.items.findIndex(i=>i.id===item.id);if(i>=0){previewState.balance+=previewState.items[i].value;previewState.items.splice(i,1);}await load();}else snapshot=await factoryCall('sell',{itemId:item.id});await renderTree();$('dialog').close();toast('판매 금액을 적립했어요.');})),button('취소',()=>showItem(a,owned,fresh)));modal('장식 판매',confirmation);},selling?'factory-button sell-primary':'factory-button sell-button'));
  modal(a.name,c);
 }
-function setPageAfterAction(page){active=page;$('.home').hidden=page!=='tree';shell.hidden=page==='tree';document.body.dataset.page=page;tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.page===page?'page':'false'));renderPage();}
+function setPageAfterAction(page){active=page;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';shell.hidden=page==='tree';document.body.dataset.page=page;tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.page===page?'page':'false'));renderPage();}
 async function render(){await renderTree();renderPage();}
 async function treePicture(){
  const home=$('.home'),rect=home.getBoundingClientRect(),canvas=document.createElement('canvas');canvas.width=1080;canvas.height=Math.round(rect.height/rect.width*1080)+140;

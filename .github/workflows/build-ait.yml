@@ -5,6 +5,14 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/build-ait.yml'
+      - 'src/**'
+      - 'assets/**'
+      - 'index.html'
+      - 'scripts/build-web.mjs'
+      - 'scripts/api-config.mjs'
+      - 'apps-in-toss.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
     inputs:
       app_name:

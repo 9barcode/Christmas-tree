@@ -3,6 +3,11 @@ export const names=['버건디 선물','초록 큰 선물','크림 선물','초�
 export const catalog=manifest.assets.map((a,i)=>({...a,name:names[i]}));
 export const byId=Object.fromEntries(catalog.map(a=>[a.id,a]));
 export const kstDate=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+export function productionBlockReason(state){
+ if(state.productionReady)return '';
+ if(!state.catalog?.length||state.catalog.some(row=>![1,2,3].includes(row.value)))return '장식별 판매 금액과 등장 확률 설정이 아직 완료되지 않았어요. 준비가 끝나면 광고를 보고 장식을 생산할 수 있어요.';
+ return '생산 광고 연결이 아직 준비되지 않았어요. 잠시 후 다시 확인해 주세요.';
+}
 export function parseFactoryCatalog(raw){
  let rows;try{rows=JSON.parse(raw);}catch{throw Error('catalog_not_configured');}
  if(!Array.isArray(rows)||rows.length!==30||new Set(rows.map(r=>r.id)).size!==30||rows.some(r=>!byId[r.id]||![1,2,3].includes(r.value)||!Number.isSafeInteger(r.weight)||r.weight<1)||rows.reduce((n,r)=>n+r.weight,0)>1000000)throw Error('catalog_not_configured');
