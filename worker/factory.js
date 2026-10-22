@@ -49,6 +49,7 @@ async function reserve(env,user,body){
   }else if(body.purpose==='tree-sale'){
    const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
    const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
+   const placed=await q(env,'SELECT count(DISTINCT asset_id) AS n FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1',user.id).first();if(placed.n!==30)fail('tree_not_ready');
   }else{
    const balance=await q(env,'SELECT COALESCE(sum(amount),0) AS n FROM tree_factory_ledger WHERE user_id=?',user.id).first();if(balance.n<1)fail('exchange_empty');
   }
@@ -125,8 +126,12 @@ async function sellTree(env,user,body){
  if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
  const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
  const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
+ const placed=await q(env,'SELECT count(DISTINCT asset_id) AS n FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1',user.id).first();if(placed.n!==30)fail('tree_not_ready');
+ const now=Date.now();
  await env.DB.batch([
-  q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,50,'tree_sale',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'tree-sale:'+user.id,user.id,Date.now(),user.id),
+  q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,50,'tree_sale',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'tree-sale:'+user.id,user.id,now,user.id),
+  q(env,"UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND sold_at IS NULL AND placed=1",now,user.id),
+  q(env,'UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?',user.id),
   q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed'",gate.id,user.id)
  ]);
 }
@@ -167,5 +172,5 @@ export async function handleFactory(request,env){
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
