@@ -55,7 +55,7 @@ export function startHomeBanner(){
  if(new URLSearchParams(location.search).get('preview')==='1')return;
  const region=document.querySelector('body > .banner-region'),target=region?.querySelector('.banner-target');
  if(!region||!target)return;
- const banner=createBanner({region,target});
+ const banner=createBanner({region,target,configKey:'bannerAdGroupId'});
  const start=()=>{banner.start().catch(()=>banner.stop())};
  window.addEventListener('pagehide',()=>banner.stop());
  window.addEventListener('pageshow',event=>{if(event.persisted)start()});
