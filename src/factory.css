@@ -10,25 +10,18 @@
 .concept-factory .factory-header button{background:transparent;border:0;color:transparent;box-shadow:none;width:100%;height:100%}
 .concept-factory .workshop{position:absolute;inset:0;margin:0;aspect-ratio:auto;background:none;overflow:hidden;transition:none;filter:none}
 .factory-concept-art{position:absolute;top:0;left:0;width:100%;height:auto;max-width:none;pointer-events:none;user-select:none}
-.factory-actors{position:absolute;inset:0;pointer-events:none;user-select:none;--factory-motion:paused}
-.factory-actors[data-running=true]{--factory-motion:running}
-.factory-actors img{position:absolute;display:block;max-width:none;pointer-events:none;user-select:none}
-.factory-worker{object-fit:contain;transform-origin:50% 94%;animation:factory-worker-rock 1.65s ease-in-out infinite;animation-play-state:var(--factory-motion);will-change:transform}
-.factory-worker--back{left:18%;top:28.6%;width:21%;animation-duration:1.9s;animation-delay:-.6s}
-.factory-worker--front{left:69%;top:38.4%;width:30.5%;animation-delay:-.2s}
-.factory-conveyor-rig{position:absolute;left:-7%;top:52.5%;width:91%;aspect-ratio:1024/160;transform:rotate(-15deg);transform-origin:0 0}
-.factory-actors .factory-conveyor-frame{inset:0;width:100%;height:100%}
-.factory-belt-surface{position:absolute;left:6.2%;top:1%;width:87.4%;height:35%;clip-path:polygon(3% 0,97% 0,100% 100%,0 100%);background:url('../assets/factory/conveyor-slat.webp') repeat-x 0 0/6cqw 100%;animation:factory-belt-flow .75s linear infinite}
-.factory-actors .factory-roller{top:40%;width:9.375%;height:60%;clip-path:circle(48%);animation:factory-roller-turn 1.2s linear infinite;will-change:transform}
-.factory-parcels{position:absolute;left:6%;top:-105%;width:88%;height:143%;overflow:hidden}
-.factory-actors .factory-parcel{left:0;bottom:0;width:14%;height:auto;animation:factory-parcel-travel 5s linear infinite}
-.factory-actors .factory-parcel--one{animation-delay:-1.4s}
-.factory-actors .factory-parcel--two{animation-delay:-3.8s}
-.factory-actors .factory-moving{animation-play-state:var(--factory-motion)}
-@keyframes factory-worker-rock{0%,100%{transform:translateY(0) rotate(-1.1deg)}50%{transform:translateY(-1cqw) rotate(1.1deg)}}
-@keyframes factory-belt-flow{to{background-position:-6cqw 0}}
-@keyframes factory-roller-turn{to{transform:rotate(-360deg)}}
-@keyframes factory-parcel-travel{0%{transform:translateX(720%);opacity:0}6%,94%{opacity:1}100%{transform:translateX(-110%);opacity:0}}
+.factory-actors{position:absolute;left:0;top:0;width:100%;aspect-ratio:1/2;pointer-events:none;user-select:none;clip-path:inset(25% 0 50% 0)}
+.factory-original-sprite{position:absolute;display:block;max-width:none;pointer-events:none;user-select:none}
+.factory-original-artwork,.factory-original-artwork>svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+.factory-original-santa{animation:factory-original-nod 1.8s ease-in-out infinite;will-change:transform}
+.factory-original-santa.factory-source-santa-back{animation-duration:2.1s}
+.factory-original-parcel{animation:factory-original-parcel-glide 2.2s ease-in-out infinite;will-change:transform}
+.factory-original-belt-flow{animation:factory-original-belt-travel .95s linear infinite}
+.factory-original-wheel{transform-box:fill-box;transform-origin:center;animation:factory-original-wheel-turn 1.8s linear infinite}
+@keyframes factory-original-nod{0%,100%{transform:translateY(0) rotate(0)}35%{transform:translateY(-.35cqw) rotate(-.9deg)}65%{transform:translateY(-.45cqw) rotate(.6deg)}}
+@keyframes factory-original-parcel-glide{0%,100%{transform:translate(0,0)}50%{transform:translate(-.8cqw,.2cqw)}}
+@keyframes factory-original-belt-travel{to{transform:translate(-38px,9.5px)}}
+@keyframes factory-original-wheel-turn{to{transform:rotate(-360deg)}}
 .concept-factory .workshop-light{top:12%;bottom:44.5%;background:none;transition:background .5s}
 .concept-factory .stopped .workshop-light{background:#24110330}
 .concept-factory .production-counter{top:19.1%;left:19.6%;width:29%;height:6.1%;border:0;outline:0;box-shadow:none;border-radius:0;padding:0;background:none;gap:0;display:block}

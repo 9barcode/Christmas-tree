@@ -25,10 +25,10 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
 test('independent layers start only during production, including the daily limit',async t=>{
  const h=harness(t);assert.equal(h.actors.hidden,true);await settle();
- assert.ok(h.painting.src.endsWith('workshop-layered.webp'));
- assert.equal(h.actors.hidden,false);assert.equal(h.actors.dataset.running,'false');
- h.produce(true);assert.equal(h.actors.dataset.running,'true','stopped limit does not suppress the final production');
- h.produce(false);assert.equal(h.actors.dataset.running,'false','skipping stops all moving layers');
+ assert.equal(h.painting.src,'original.png','the original painting is never replaced');
+ assert.equal(h.actors.hidden,true);assert.equal(h.actors.dataset.running,'false');
+ h.produce(true);assert.equal(h.actors.hidden,false);assert.equal(h.actors.dataset.running,'true','stopped limit does not suppress the final production');
+ h.produce(false);assert.equal(h.actors.hidden,true);assert.equal(h.actors.dataset.running,'false','skipping restores the exact original painting');
  h.produce(true);h.doc.hidden=true;h.doc.dispatchEvent(new Event('visibilitychange'));
  assert.equal(h.actors.dataset.running,'false');
  h.doc.hidden=false;h.doc.dispatchEvent(new Event('visibilitychange'));

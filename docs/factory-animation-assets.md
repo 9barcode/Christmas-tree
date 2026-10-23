@@ -1,61 +1,63 @@
-# Layered factory animation
+# Original artwork factory animation
 
-The production scene uses independent transparent sprites and CSS animations.
-There is no scanline warp, image-patch displacement, or per-frame canvas copy.
+The approved reference is `assets/factory/concept-original.png`, 512 x 1024.
+Its artwork, character poses, conveyor perspective, UI and framing are retained.
+The redesigned Santa and straight conveyor assets from the previous revision are
+no longer consumed by the scene renderer.
 
-## Assets
+## Source cutouts
 
-All three source illustrations were generated with the built-in image generation
-tool using `assets/factory/concept-original.png` as the reference. Generated alpha
-is preserved. WebP export, transparent-margin trimming, and the two belt component
-crops are mechanical asset preparation; they do not redraw the illustrations.
+`src/factory-scene-layers.js` records source-pixel coordinates and silhouette
+mattes. Run `node scripts/extract-factory-layers.mjs` with ImageMagick installed
+to reproduce the lossless cutouts. Their color pixels come from the approved
+painting, not newly generated characters. The silhouette mattes are traced paths.
 
-| File under assets/factory | Purpose |
+All current runtime assets are under `assets/factory/original/`:
+
+| Asset | Source and use |
 | --- | --- |
-| workshop-layered.webp | Clean background without working Santas, conveyor, or conveyor gifts |
-| santa-worker.webp | Complete clipboard Santa, reused at two sizes |
-| conveyor-frame.webp | Independent wooden conveyor with brass rollers |
-| conveyor-slat.webp | Repeatable surface tile cropped from the generated conveyor |
-| conveyor-roller.webp | Roller face cropped from the generated conveyor |
+| santa-back.webp | Original small, front-facing clipboard Santa |
+| santa-front.webp | Original large, right-hand clipboard Santa |
+| parcel-left.webp | Original cropped gift at the left conveyor edge |
+| parcel-center.webp | Original small red/yellow gift |
+| mystery-box.webp | Original cream mystery gift |
+| floor-gift.webp | Original green gift standing in front of the machine |
+| conveyor.webp | Original machine, at its original perspective |
+| roller-0.webp through roller-3.webp | Original painted wheel faces |
+| belt-tile.webp | Original wooden slat texture, without glowing bulbs |
+| repair.webp | Generated occluded background; only visible under moving silhouettes |
 
-The original painting remains the loading/error fallback. The clean background
-and all sprites appear together only after their images decode successfully.
-The existing production and overtime controls remain interactive HTML.
+## Geometry and motion
 
-## Generation prompts
+The overlay uses the same 512:1024 coordinate system as the original image.
+There is no extra conveyor rotation, responsive coordinate guess, or replacement
+background. Santa and gift sprites use the original crop coordinates and sizes.
 
-Background (precise-object-edit): use the original portrait workshop as the edit
-target. Remove only both working clipboard Santas, diagonal conveyor and rollers,
-and small conveyor gifts. Reconstruct the empty warm wooden workbench and floor.
-Keep the large cream mystery present, oven, window, wreath, lighting, viewpoint,
-painted style, and all UI panels and Korean lettering in their original positions.
-No new props, people, crop, or reframing.
+Idle, reduced-motion, skipped, and completed states display the original painting
+directly. Once production starts, decoded cutouts nod gently around the base;
+gifts glide a few pixels along the original belt; painted roller faces turn and
+exposed belt segments scroll. Characters are rigid image layers, not warped pixels.
 
-Santa (stylized-concept/background-extraction): use the original lower-right Santa
-as the character and style reference. One isolated chubby clipboard Santa with
-rosy cheeks, red nose, floppy red hat, cream fur cuffs, and a complete upper body
-ending at a rounded coat hem. Same warm amber painted storybook style and slight
-left-facing three-quarter view. Both hands and clipboard complete. Stable neutral
-working pose, clean actual alpha, no background, ground, text, UI, or extra props.
+The generated repair plate is masked to the two moving Santa silhouettes and
+two conveyor gift silhouettes, with a narrow edge margin. Its newly generated UI,
+background details, and any other modifications are never displayed. All motion
+is clipped to source y=256..512, above the original production panel. Cleanup
+prevents abandoned image loads or observers from restoring a previous scene.
 
-Conveyor (stylized-concept): one isolated horizontal conveyor on actual alpha,
-slightly viewed from above, with honey-colored wooden slats, dark brown side frame,
-four round brass roller faces, and rounded end caps. Match the warm painted toy
-workshop. No diagonal tilt or vanishing point; orientation is applied in CSS.
-No gifts, people, floor, room, labels, or text.
+## Background repair prompt
 
-## Motion and lifecycle
+Built-in image generation tool; edit target: the approved original painting.
+Remove only the two working clipboard Santas and the two conveyor gifts.
+Reconstruct the occluded workbench, floor, and original wooden belt surface.
+Preserve the exact original conveyor perspective, angle, wheels, dimensions,
+mystery box, floor gift, lighting, UI, lettering, viewpoint, and 1:2 composition.
+No replacement people, new straight conveyor, rotated objects, or reframing.
 
-- Production starts after the existing ad/server completion flow. No economy or
-  advertisement verification behavior changes.
-- Santas rock gently around the lower torso over 1.65/1.9 seconds, out of phase.
-  The intact sprite moves as one rigid layer; its face and hands never stretch.
-- The belt surface repeats continuously in one direction. Roller faces turn in
-  the same direction, and two existing gift thumbnails travel along the belt.
-- Idle, skipped, finished, background, and reduced-motion states pause animation.
-  The final daily production still animates even when the limit is reached.
-- Renderer cleanup disconnects observers/listeners and prevents late image
-  loading from reattaching a scene after navigation.
+The generated repair image is reduced to 512 x 1024 for alignment and exported
+as WebP. It is used only inside the restricted silhouette mask described above.
 
-Validation: image availability/alpha, mobile layout and animation frames, final
-production, skip, navigation, reduced motion, loading failures, and web build.
+## Validation
+
+Check original idle appearance, rigid source-sized sprites, absence of UI overlap,
+CSS motion during all ten productions including the last, skip/finish restoration,
+navigation cleanup, reduced motion, missing-layer fallback, and the web build.
