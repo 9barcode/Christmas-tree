@@ -2,49 +2,49 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startFactoryScene} from '../src/factory-scene.js';
 
-function harness(t,{stopped=false,reduced=false}={}){
- const saved=Object.fromEntries(['document','matchMedia','MutationObserver','requestAnimationFrame','cancelAnimationFrame'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
- const doc=new EventTarget();doc.body={dataset:{page:'factory'}};doc.hidden=false;
- const motion=new EventTarget();motion.matches=reduced;
- const frames=new Map(),calls=[];let sequence=0,observer,disconnected=false,producing=false;
+function harness(t,{decode=()=>Promise.resolve()}={}){
+ const keys=['document','matchMedia','MutationObserver'];
+ const saved=Object.fromEntries(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ class Element{
+  constructor(){this.children=[];this.dataset={};this.style={};}
+  setAttribute(){}
+  append(child){this.children.push(child);child.parent=this;}
+  remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);}
+  decode(){return decode();}
+ }
+ const doc=new EventTarget();doc.hidden=false;doc.body={dataset:{page:'factory'}};doc.createElement=()=>new Element();
+ const motion=new EventTarget();motion.matches=false;let observer,disconnected=false,producing=false;
  globalThis.document=doc;globalThis.matchMedia=()=>motion;
- globalThis.requestAnimationFrame=fn=>{frames.set(++sequence,fn);return sequence;};
- globalThis.cancelAnimationFrame=id=>frames.delete(id);
  globalThis.MutationObserver=class{constructor(fn){observer=fn;}observe(){}disconnect(){disconnected=true;}};
- const ctx=new Proxy({}, {get:(_,name)=>(...args)=>calls.push([name,...args]),set:()=>true});
- const canvas={parentElement:{},getContext:()=>ctx},image={decode:()=>Promise.resolve()};
- const stop=startFactoryScene(canvas,image,()=>stopped,()=>producing);
- t.after(()=>{stop();for(const [k,descriptor] of Object.entries(saved)){if(descriptor)Object.defineProperty(globalThis,k,descriptor);else delete globalThis[k];}});
- return {canvas,calls,doc,motion,frames,stop,get disconnected(){return disconnected;},
-  producing(value){producing=value;observer();},
-  tick(time){const pending=[...frames.values()];frames.clear();for(const fn of pending)fn(time);},
- };
+ const scene=new Element();scene.classList={contains:name=>name==='producing'?producing:name==='stopped'};
+ const painting={src:'original.png'},stop=startFactoryScene(scene,painting),actors=scene.children[0];
+ t.after(()=>{stop();for(const [key,d] of Object.entries(saved)){if(d)Object.defineProperty(globalThis,key,d);else delete globalThis[key];}});
+ return {doc,motion,painting,actors,scene,stop,get disconnected(){return disconnected;},produce(value){producing=value;observer();}};
 }
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
-test('production wakes an idle/stopped scene, including the last daily item',async t=>{
- const h=harness(t,{stopped:true});await Promise.resolve();h.tick(0);
- assert.equal(h.canvas.hidden,true);assert.equal(h.frames.size,0);
- h.producing(true);h.tick(100);
- assert.equal(h.canvas.hidden,false);
- const first=h.calls.filter(c=>c[0]==='drawImage').map(c=>c.slice(2));
- assert.equal(h.calls.filter(c=>c[0]==='rotate').length,4,'painted rollers rotate');
- h.calls.length=0;h.tick(300);
- assert.notDeepEqual(h.calls.filter(c=>c[0]==='drawImage').map(c=>c.slice(2)),first,'both Santas change pose over time');
- assert.ok(h.calls.some(c=>c[0]==='lineTo'),'belt joints travel');
- h.producing(false);h.tick(350);
- assert.equal(h.canvas.hidden,true);assert.equal(h.frames.size,0);
+test('independent layers start only during production, including the daily limit',async t=>{
+ const h=harness(t);assert.equal(h.actors.hidden,true);await settle();
+ assert.ok(h.painting.src.endsWith('workshop-layered.webp'));
+ assert.equal(h.actors.hidden,false);assert.equal(h.actors.dataset.running,'false');
+ h.produce(true);assert.equal(h.actors.dataset.running,'true','stopped limit does not suppress the final production');
+ h.produce(false);assert.equal(h.actors.dataset.running,'false','skipping stops all moving layers');
+ h.produce(true);h.doc.hidden=true;h.doc.dispatchEvent(new Event('visibilitychange'));
+ assert.equal(h.actors.dataset.running,'false');
+ h.doc.hidden=false;h.doc.dispatchEvent(new Event('visibilitychange'));
+ assert.equal(h.actors.dataset.running,'true');
+ h.motion.matches=true;h.motion.dispatchEvent(new Event('change'));assert.equal(h.actors.dataset.running,'false');
+ h.motion.matches=false;h.motion.dispatchEvent(new Event('change'));assert.equal(h.actors.dataset.running,'true');
+ h.stop();assert.equal(h.disconnected,true);assert.equal(h.scene.children.length,0);assert.equal(h.actors.dataset.running,'false');
 });
 
-test('hidden pages and reduced motion stop drawing; visibility restores production',async t=>{
- const h=harness(t);await Promise.resolve();h.producing(true);h.tick(0);
- h.doc.hidden=true;h.doc.dispatchEvent(new Event('visibilitychange'));h.tick(100);
- assert.equal(h.canvas.hidden,true);assert.equal(h.frames.size,0);
- h.doc.hidden=false;h.doc.dispatchEvent(new Event('visibilitychange'));h.tick(200);
- assert.equal(h.canvas.hidden,false);
- h.motion.matches=true;h.motion.dispatchEvent(new Event('change'));h.tick(300);
- assert.equal(h.canvas.hidden,true);assert.equal(h.frames.size,0);
- h.motion.matches=false;h.motion.dispatchEvent(new Event('change'));h.tick(400);
- assert.equal(h.canvas.hidden,false);
- h.stop();assert.equal(h.canvas.hidden,true);assert.equal(h.frames.size,0);assert.equal(h.disconnected,true);
- h.producing(true);assert.equal(h.frames.size,0,'disposed scene cannot restart');
+test('a missing sprite preserves the original painting instead of an empty scene',async t=>{
+ const h=harness(t,{decode:()=>Promise.reject(Error('missing asset'))});h.produce(true);await settle();
+ assert.equal(h.painting.src,'original.png');assert.equal(h.actors.hidden,true);assert.equal(h.actors.dataset.running,'false');
+});
+
+test('leaving while assets load cannot reattach an abandoned scene',async t=>{
+ let complete;const pending=new Promise(resolve=>{complete=resolve;});
+ const h=harness(t,{decode:()=>pending});h.stop();complete();await settle();
+ assert.equal(h.painting.src,'original.png');assert.equal(h.scene.children.length,0);
 });

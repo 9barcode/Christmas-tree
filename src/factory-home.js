@@ -132,9 +132,8 @@ function renderFactory(){
  const stopped=snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
  scene.setAttribute('aria-label','시안 원본의 산타 장식 공장');
  const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.png';painting.alt='';painting.draggable=false;
- const canvas=node('canvas','factory-scene-motion');canvas.setAttribute('aria-hidden','true');
- scene.append(painting,canvas,node('div','workshop-light'));shell.append(scene);
- stopFactoryScene=startFactoryScene(canvas,painting,()=>scene.classList.contains('stopped'),()=>scene.classList.contains('producing'));
+ scene.append(painting,node('div','workshop-light'));shell.append(scene);
+ stopFactoryScene=startFactoryScene(scene,painting);
  const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));
  const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
  const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
