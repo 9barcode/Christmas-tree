@@ -54,7 +54,7 @@ const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute
 const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');
 const debugSkipSwitch=button('',()=>setDebugSkip(!debugAdsSkipped),'debug-skip-switch');debugSkipSwitch.setAttribute('role','switch');debugSkipSwitch.setAttribute('aria-label','광고 스킵 켜기 또는 끄기');
 const debugControls=node('div','debug-controls');debugControls.append(debugSkipSwitch,debugLaunch);document.body.append(debugControls);
-function syncDebugSkipSwitch(){const enabled=preview||!!snapshot?.debugAdSkipEnabled;debugSkipSwitch.disabled=!enabled;debugSkipSwitch.setAttribute('aria-checked',String(debugAdsSkipped));debugSkipSwitch.innerHTML='<span class="debug-radio" aria-hidden="true"></span><span>'+ (debugAdsSkipped?'ON':'OFF') +'</span>';}
+function syncDebugSkipSwitch(){const enabled=preview||!!snapshot?.debugAdSkipEnabled;debugControls.hidden=!enabled;debugSkipSwitch.disabled=!enabled;debugSkipSwitch.setAttribute('aria-checked',String(debugAdsSkipped));debugSkipSwitch.innerHTML='<span class="debug-radio" aria-hidden="true"></span><span>'+ (debugAdsSkipped?'ON':'OFF') +'</span>';}
 async function setDebugSkip(value){if(!preview&&!snapshot?.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}debugAdsSkipped=value;debugMode=value;syncDebugSkipSwitch();await render();toast(value?'광고 스킵 ON':'광고 스킵 OFF');}
 $('dialog').addEventListener('close',()=>{const dialog=$('dialog');dialog.classList.remove('debug-dialog');dialog.style.left='';dialog.style.top='';dialog.style.margin='';dialog.style.transform='';});
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
@@ -129,16 +129,16 @@ function renderPage(){
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 배치한 장식을 판매하면 트리에서도 회수돼요.'));
 }
 function renderFactory(){
- const stopped=snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
+ const stopped=snapshot.used>=snapshot.limit&&!debugAdsSkipped,scene=node('div','workshop'+(stopped?' stopped':''));
  scene.setAttribute('aria-label','시안 원본의 산타 장식 공장');
  const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.png';painting.alt='';painting.draggable=false;
  scene.append(painting,node('div','workshop-light'));shell.append(scene);
  stopFactoryScene=startFactoryScene(scene,painting);
  const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));
  const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
- const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
- const unavailable=!preview&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
- const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
+ const panel=node('section','production-panel');panel.append(node('p','',debugAdsSkipped?'디버그 모드 · 광고 없이 장식 1개를 생산해요.':'광고를 보고 랜덤 장식 1개를 생산해요.'));
+ const unavailable=!preview&&!debugAdsSkipped&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
+ const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':debugAdsSkipped?`디버그 생산 가능 · 오늘 ${snapshot.used}회 생산`:`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
  const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):button('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
@@ -158,10 +158,10 @@ async function requestOvertime(){
  await run(async()=>{if(preview){if(!allowDebugAdSkip())return;previewState.overtime=true;previewState.limit=20;await load();}else{if(debugAdsSkipped)await factoryDebugAd('overtime');else await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');});
 }
 async function produceItem(){
- const reason=!preview&&productionBlockReason(snapshot);
+ const reason=!preview&&!debugAdsSkipped&&productionBlockReason(snapshot);
  if(reason){const content=node('div');content.append(node('p','',reason),button('확인',()=>$('dialog').close()));modal('공장 생산 준비 중',content);return;}
  await run(async()=>{
- let result;if(preview){if(!allowDebugAdSkip())return;rollover();if(previewState.used>=previewState.limit)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=debugAdsSkipped?await factoryDebugAd('produce'):await factoryAd('produce');
+ let result;if(preview){if(!allowDebugAdSkip())return;rollover();if(previewState.used>=previewState.limit&&!debugAdsSkipped)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=debugAdsSkipped?await factoryDebugAd('produce'):await factoryAd('produce');
  await load();renderPage();const scene=$('.workshop');scene?.classList.remove('stopped');scene?.classList.add('producing');const produced=snapshot.items.find(i=>i.id===result.itemId);if(produced&&scene){const reveal=art(byId[produced.asset_id]);reveal.className='revealed-ornament';scene.append(reveal);}const skip=button('연출 건너뛰기',()=>{},'skip-production');skip.disabled=false;shell.append(skip);
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
  const item=snapshot.items.find(i=>i.id===result.itemId);if(item)showItem(byId[item.asset_id],[item],true);
