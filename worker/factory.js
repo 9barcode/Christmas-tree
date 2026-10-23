@@ -6,7 +6,8 @@ import {advanceFactoryPayment} from './factory-payments.js';
 const q=(env,sql,...args)=>env.DB.prepare(sql).bind(...args);
 const fail=code=>{throw Error(code);};
 function configured(env){try{return parseFactoryCatalog(env.TREE_FACTORY_CATALOG);}catch{return null;}}
-function debugAdSkipEnabled(){return true;}
+const DEBUG_AD_SKIP_USER_IDS=new Set(['1797698a-ecc8-4da1-8a8e-487c49d95f10','97c6db6d-87e3-4f93-8f40-9f158641203a']);
+function debugAdSkipEnabled(user){return !!user&&DEBUG_AD_SKIP_USER_IDS.has(user.id);}
 async function initialize(env,user){
  await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
  await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE user_id=? AND state='reserved' AND (expires_at<=? OR date<>?)",user.id,Date.now(),kstDate()).run();
@@ -37,11 +38,11 @@ async function view(env,user){
  q(env,'SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
  const rows=configured(env),overtime=usage.results.some(r=>r.purpose==='overtime'),used=usage.results.find(r=>r.purpose==='produce')?.n||0;
  const treeSale=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'tree-sale:'+user.id).first();
- return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
+ return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(user),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 async function reserve(env,user,body,allowDebugSkip=false){
  if(['sell','tree-sale','exchange'].includes(body.purpose)){
-  const configuredAd=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];const debugSkip=allowDebugSkip&&debugAdSkipEnabled(env);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
+  const configuredAd=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];const debugSkip=allowDebugSkip&&debugAdSkipEnabled(user);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
   let itemId=null;
   if(body.purpose==='sell'){
    if(typeof body.itemId!=='string')fail('invalid_request');
@@ -60,7 +61,7 @@ async function reserve(env,user,body,allowDebugSkip=false){
  }
  if(!['produce','overtime'].includes(body.purpose))fail('invalid_request');
  if(!configured(env))fail('catalog_not_configured');
- const ads=publicAdConfig(env),configuredAd=body.purpose==='produce'?ads.interstitialAdGroupId:ads.rewardedAdGroupId;const debugSkip=allowDebugSkip&&debugAdSkipEnabled(env);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
+ const ads=publicAdConfig(env),configuredAd=body.purpose==='produce'?ads.interstitialAdGroupId:ads.rewardedAdGroupId;const debugSkip=allowDebugSkip&&debugAdSkipEnabled(user);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
  const id=crypto.randomUUID(),date=kstDate(),expires=Date.now()+600000;
  const used="(SELECT count(*) FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='produce' AND state='completed')";
  const overtime="EXISTS(SELECT 1 FROM tree_factory_requests WHERE user_id=? AND date=? AND purpose='overtime' AND state='completed')";
@@ -74,7 +75,7 @@ async function finish(env,user,body,allowDebugSkip=false){
   if(['completed','consumed'].includes(adGate.state))return {requestId:adGate.id,purpose:adGate.purpose};
   if(adGate.state!=='reserved'||adGate.date!==kstDate()||adGate.expires_at<=Date.now())fail('request_expired');
   const valid=adGate.purpose==='exchange'?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
-  if(!(allowDebugSkip&&debugAdSkipEnabled(env))&&(body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
+  if(!(allowDebugSkip&&debugAdSkipEnabled(user))&&(body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
   const now=Date.now();const result=await q(env,"UPDATE tree_factory_ad_gates SET state='completed',completed_at=? WHERE id=? AND user_id=? AND state='reserved' AND expires_at>?",now,adGate.id,user.id,now).run();
   if(result.meta.changes!==1)fail('request_expired');
   return {requestId:adGate.id,purpose:adGate.purpose};
@@ -83,7 +84,7 @@ async function finish(env,user,body,allowDebugSkip=false){
  if(!r)fail('request_not_found');if(r.state==='completed')return {itemId:r.result_id};
  if(r.state!=='reserved'||r.date!==kstDate()||r.expires_at<=Date.now())fail('request_expired');
  const rewarded=r.purpose==='overtime';const valid=rewarded?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
- if(!(allowDebugSkip&&debugAdSkipEnabled(env))&&(body.adGroupId!==r.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
+ if(!(allowDebugSkip&&debugAdSkipEnabled(user))&&(body.adGroupId!==r.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
  const now=Date.now(),rows=configured(env);if(!rows)fail('catalog_not_configured');
  const draw=r.purpose==='produce'?drawCatalog(rows):null;
  const id=draw?crypto.randomUUID():null;
@@ -96,7 +97,7 @@ async function finish(env,user,body,allowDebugSkip=false){
  const saved=await q(env,'SELECT result_id FROM tree_factory_requests WHERE id=? AND user_id=?',r.id,user.id).first();return {itemId:saved.result_id};
 }
 async function debugAdSkip(env,user,body){
- if(!debugAdSkipEnabled(env))fail('debug_ad_skip_disabled');
+ if(!debugAdSkipEnabled(user))fail('debug_ad_skip_disabled');
  const reservation=await reserve(env,user,body,true),purpose=reservation.purpose;
  const interstitial=['sell','tree-sale','produce'].includes(purpose),rewarded=purpose==='exchange'||purpose==='overtime';
  return finish(env,user,{requestId:reservation.requestId,adGroupId:reservation.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded,displayed:true,dismissed:true},true);
@@ -146,7 +147,7 @@ async function sellTree(env,user,body){
 async function exchange(env,user,body){
  const debugTest=body.debugTest===true;
  const mode=debugTest?'test':String(env.TOSS_PROMOTION_MODE||'live'),raw=String(env.TOSS_PROMOTION_CODE_EXCHANGE||'').trim();
- if(debugTest&&!debugAdSkipEnabled(env))fail('debug_ad_skip_disabled');
+ if(debugTest&&!debugAdSkipEnabled(user))fail('debug_ad_skip_disabled');
  if(!['live','test'].includes(mode)||!raw||!env.TOSS_MTLS||(mode==='live'&&raw.startsWith('TEST_')))fail('exchange_not_configured');
  const active=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? AND state NOT IN ('succeeded','failed')",user.id).first();
  if(active){await advanceFactoryPayment(env,user,active.id);return;}
