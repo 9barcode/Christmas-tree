@@ -11,9 +11,9 @@ async function setup(){
  sql.prepare('INSERT INTO tree_users(id,toss_user_key) VALUES(?,?)').run('user','anon:test');
  sql.prepare('INSERT INTO tree_sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(hash,'user','2099-01-01T00:00:00Z');
  const DB={prepare(query){let values=[];return {bind(...v){values=v;return this},async first(){return sql.prepare(query).get(...values)??null},async all(){return {results:sql.prepare(query).all(...values)}},async run(){const result=sql.prepare(query).run(...values);return {meta:{changes:Number(result.changes)}}}}},async batch(statements){sql.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}}};
- const env={DB,REWARDED_AD_GROUP_ID:'reward',TREE_FACTORY_CATALOG:JSON.stringify(catalog.map(a=>({id:a.id,value:2,weight:1})))};
+ const env={DB,REWARDED_AD_GROUP_ID:'reward',INTER_AD_GROUP_ID:'inter',TREE_FACTORY_CATALOG:JSON.stringify(catalog.map(a=>({id:a.id,value:2,weight:1})))};
  async function send(path,body,auth=true){const r=await handleFactory(new Request('https://test/api/v3/'+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(auth?{Authorization:'Bearer '+token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})}),env);return {status:r.status,...await r.json()};}
- async function ad(purpose='produce'){const r=await send('ads/reserve',{purpose});assert.equal(r.status,200,JSON.stringify(r));const proof={requestId:r.requestId,adGroupId:r.adGroupId,eventType:'userEarnedReward',rewarded:true,displayed:true,dismissed:true};return {proof,result:await send('ads/complete',proof)};}
+ async function ad(purpose='produce',details={}){const r=await send('ads/reserve',{purpose,...details});assert.equal(r.status,200,JSON.stringify(r));const interstitial=['produce','sell','tree-sale'].includes(purpose),proof={requestId:r.requestId,adGroupId:r.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded:!interstitial,displayed:true,dismissed:true};return {requestId:r.requestId,proof,result:await send('ads/complete',proof)};}
  return {sql,env,send,ad};
 }
 test('production commits once; daily ten, one overtime, max twenty, KST rollover',async()=>{
@@ -44,11 +44,12 @@ test('SDK reward is mandatory, sales/collection claims idempotent, layout uses r
  assert.equal((await send('layout',body)).status,200);
  assert.equal((await send('layout',body)).error,'positions_conflict');
  assert.equal((await send('layout',{...body,revision:1,items:[{id:'not-owned',x:50,y:50}]})).error,'item_unavailable');
- await send('sell',{itemId:result.itemId});await send('sell',{itemId:result.itemId});const sold=await send('state');assert.equal(sold.items.length,0);assert.equal(sold.balance,2);assert.equal(sold.collection.length,1);
- assert.equal((await send('claim',{})).balance,2);
+ assert.equal((await send('layout',{...body,revision:1,items:[]})).status,200);
+ const sale=await ad('sell',{itemId:result.itemId});await send('sell',{itemId:result.itemId,adRequestId:sale.requestId});await send('sell',{itemId:result.itemId,adRequestId:sale.requestId});const sold=await send('state');assert.equal(sold.items.length,0);assert.equal(sold.balance,2);assert.equal(sold.collection.length,1);
+ assert.equal((await send('claim',{})).error,'invalid_request');assert.equal((await send('state')).balance,2);
  for(const a of catalog)sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?) ON CONFLICT DO NOTHING').run('user',a.id,Date.now());
- assert.equal((await send('claim',{})).balance,32);assert.equal((await send('claim',{})).balance,32);
- assert.equal((await send('exchange',{requestId:crypto.randomUUID()})).error,'exchange_not_configured');assert.equal((await send('state')).balance,32);
+ assert.equal((await send('claim',{})).error,'invalid_request');assert.equal((await send('claim',{})).error,'invalid_request');
+ assert.equal((await send('exchange',{requestId:crypto.randomUUID()})).error,'exchange_not_configured');assert.equal((await send('state')).balance,2);
  }finally{sql.close();}
 });
 test('catalog rejects missing, unknown, duplicate and invalid pricing; expired ads do not grant',async()=>{
@@ -74,13 +75,39 @@ test('legacy main-tree layout survives once without minting sale value or a seco
 
 test('exchange holds only server balance, retries do not debit twice, failed and test transfers refund once',async()=>{
  const {sql,env,send,ad}=await setup();try{
- const r=await ad();await send('sell',{itemId:r.result.itemId});
+ const r=await ad();const sale=await ad('sell',{itemId:r.result.itemId});await send('sell',{itemId:r.result.itemId,adRequestId:sale.requestId});
  env.TOSS_PROMOTION_CODE_EXCHANGE='LIVE_CODE';env.TOSS_PROMOTION_MODE='live';env.TOSS_MTLS={};
  // Leave provider unreachable: verify durable reservation/recovery using real SQL, with no external payout.
- const requestId=crypto.randomUUID();const first=await send('exchange',{requestId,amount:999});assert.equal(first.status,200,JSON.stringify(first));assert.equal(first.balance,0);assert.equal(first.payments[0].amount,2);
+ const exchangeAd=await ad('exchange');const requestId=crypto.randomUUID();const first=await send('exchange',{requestId,adRequestId:exchangeAd.requestId,amount:999});assert.equal(first.status,200,JSON.stringify(first));assert.equal(first.balance,0);assert.equal(first.payments[0].amount,2);
  const again=await send('exchange',{requestId});assert.equal(again.balance,0);assert.equal(again.payments.length,1);
  sql.prepare("UPDATE tree_factory_payments SET state='failed'").run();assert.equal((await send('recover',{})).balance,2);assert.equal((await send('recover',{})).balance,2);
- env.TOSS_PROMOTION_MODE='test';env.TOSS_PROMOTION_CODE_EXCHANGE='TEST_CODE';await send('exchange',{requestId:crypto.randomUUID()});assert.equal((await send('state')).balance,0);
+ env.TOSS_PROMOTION_MODE='test';env.TOSS_PROMOTION_CODE_EXCHANGE='TEST_CODE';const testAd=await ad('exchange');await send('exchange',{requestId:crypto.randomUUID(),adRequestId:testAd.requestId});assert.equal((await send('state')).balance,0);
  sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE mode='test'").run();assert.equal((await send('recover',{})).balance,2);assert.equal((await send('recover',{})).balance,2);
+ }finally{sql.close();}
+});
+
+test('tree sale pays fixed 50P at most once per KST day, can sell again tomorrow, and never adds bells',async()=>{
+ const {sql,env,send}=await setup();try{
+ env.TOSS_PROMOTION_CODE_TREE_SALE='TREE_SALE_CODE';env.TOSS_PROMOTION_CODE_EXCHANGE='ORNAMENT_EXCHANGE_CODE';env.TOSS_PROMOTION_MODE='live';env.TOSS_MTLS={};
+ for(const a of catalog)sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
+ async function completeSale(){
+  const reservation=await send('ads/reserve',{purpose:'tree-sale'});assert.equal(reservation.status,200,JSON.stringify(reservation));
+  const gate=await send('ads/complete',{requestId:reservation.requestId,adGroupId:'inter',eventType:'dismissed',rewarded:false,displayed:true,dismissed:true});assert.equal(gate.status,200);
+  return send('claim',{adRequestId:reservation.requestId});
+ }
+ function addPlacedTree(prefix){for(const a of catalog)sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,x,y,source,created_at) VALUES(?,?,?,1,1,50,50,?,?)').run(prefix+a.id,'user',a.id,'seed:'+prefix+a.id,Date.now());}
+ addPlacedTree('item:');const result=await completeSale();assert.equal(result.status,200,JSON.stringify(result));
+ const payment=sql.prepare("SELECT amount,promotion_code,purpose,state,business_date FROM tree_factory_payments WHERE user_id='user'").get();assert.equal(payment.amount,50);assert.equal(payment.promotion_code,'TREE_SALE_CODE');assert.equal(payment.purpose,'tree-sale');assert.equal(payment.business_date,kstDate());
+ assert.equal(result.balance,0);assert.equal(result.treeSold,false);assert.equal(result.treeSalePending,true);assert.equal(result.items.length,30);
+ const state=await send('state');assert.equal((await send('layout',{revision:state.revision,pot:state.pot,items:[]})).error,'payment_in_progress');
+ sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();const recovered=await send('recover',{});assert.equal(recovered.treeSold,true);assert.equal(recovered.treeSalePending,false);assert.equal(recovered.balance,0);assert.equal(recovered.items.length,0);
+ assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_ledger WHERE kind='tree_sale'").get().n,0);
+ assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'tree_sale_daily_limit');
+ sql.prepare("UPDATE tree_factory_payments SET business_date='2000-01-01' WHERE purpose='tree-sale'").run();assert.equal((await send('state')).treeSold,false);
+ addPlacedTree('tomorrow:');const next=await completeSale();assert.equal(next.status,200,JSON.stringify(next));
+ assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_payments WHERE purpose='tree-sale'").get().n,2);
+ sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale' AND business_date=?").run(kstDate());await send('recover',{});
+ assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'tree_sale_daily_limit');
+ assert.equal((await send('state')).balance,0);
  }finally{sql.close();}
 });
