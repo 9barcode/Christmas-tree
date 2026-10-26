@@ -96,7 +96,7 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .factory-content.has-sale-footer{padding-bottom:104px}
 
 .garden .tree-decoration-tappable{pointer-events:auto;cursor:pointer;touch-action:manipulation}
-.tree-remove-action{position:absolute;z-index:30;min-width:62px;transform:translate(-50%,-105%);padding:5px 9px;border:2px solid #b8843f;border-radius:999px;background:linear-gradient(#fff6dc,#efd19b);color:#245a3b;box-shadow:0 3px 7px #29150b88;font:inherit;font-size:12px;line-height:1;white-space:nowrap;pointer-events:auto}
+.tree-remove-action{position:absolute;z-index:9999!important;min-width:62px;transform:translate(-50%,-105%);padding:5px 9px;border:2px solid #b8843f;border-radius:999px;background:linear-gradient(#fff6dc,#efd19b);color:#245a3b;box-shadow:0 3px 7px #29150b88;font:inherit;font-size:12px;line-height:1;white-space:nowrap;pointer-events:auto}
 .tree-remove-action:before{content:'✦';margin-right:4px;color:#b83b2b}
 .placed-badge{position:absolute;left:5px;top:5px;z-index:1;padding:3px 5px;border:1px solid #f5dfad;border-radius:12px;background:linear-gradient(#4b8252,#2e6945);color:#fff4d4;box-shadow:0 1px 3px #36201555;font-size:clamp(9px,2.45vw,11px);line-height:1.1;white-space:nowrap;pointer-events:none}
 
