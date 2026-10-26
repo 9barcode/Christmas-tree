@@ -40,14 +40,23 @@ async function view(env,user){
  const treeSale=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'tree-sale:'+user.id).first();
  return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(user),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
+function saleIds(body){
+ const ids=body.itemIds===undefined?[body.itemId]:body.itemIds;
+ if(!Array.isArray(ids)||ids.length<1||ids.length>3||ids.some(id=>typeof id!=='string'||!id)||new Set(ids).size!==ids.length)fail('invalid_request');
+ return [...ids].sort();
+}
+const saleKey=ids=>ids.length===1?ids[0]:JSON.stringify(ids);
+async function saleItems(env,user,ids){
+ const rows=(await q(env,`SELECT id,placed FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND value>0 AND id IN (${ids.map(()=>'?').join(',')})`,user.id,...ids).all()).results;
+ if(rows.length!==ids.length)fail('item_unavailable');
+ if(rows.some(i=>i.placed))fail('item_placed');
+}
 async function reserve(env,user,body,allowDebugSkip=false){
  if(['sell','tree-sale','exchange'].includes(body.purpose)){
   const configuredAd=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];const debugSkip=allowDebugSkip&&debugAdSkipEnabled(user);if(!configuredAd&&!debugSkip)fail('ad_not_configured');const ad=configuredAd||(debugSkip?'DEBUG_TEST':null);
   let itemId=null;
   if(body.purpose==='sell'){
-   if(typeof body.itemId!=='string')fail('invalid_request');
-   const item=await q(env,'SELECT id FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0',body.itemId,user.id).first();if(!item)fail('item_unavailable');
-   itemId=item.id;
+   const ids=saleIds(body);await saleItems(env,user,ids);itemId=saleKey(ids);
   }else if(body.purpose==='tree-sale'){
    const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
    const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
@@ -105,17 +114,21 @@ async function debugAdSkip(env,user,body){
  return finish(env,user,{requestId:reservation.requestId,adGroupId:reservation.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded,displayed:true,dismissed:true},true);
 }
 async function sell(env,user,body){
- if(typeof body.itemId!=='string'||typeof body.adRequestId!=='string')fail('invalid_request');
+ const ids=saleIds(body);if(typeof body.adRequestId!=='string')fail('invalid_request');
  const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
- if(!gate||gate.purpose!=='sell'||gate.item_id!==body.itemId||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
- const item=await q(env,'SELECT id FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0',body.itemId,user.id).first();if(!item)fail('item_unavailable');
- const now=Date.now();
- await env.DB.batch([
-  q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT 'sale:'||id,user_id,value,'sale',? FROM tree_factory_items WHERE id=? AND user_id=? AND sold_at IS NULL AND value>0 ON CONFLICT DO NOTHING`,now,body.itemId,user.id),
-  q(env,"UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id='sale:'||tree_factory_items.id)",now,body.itemId,user.id),
-  q(env,'UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?',user.id),
-  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed'",gate.id,user.id)
+ if(!gate||gate.purpose!=='sell'||gate.item_id!==saleKey(ids)||!['completed','consumed'].includes(gate.state)||gate.date!==kstDate())fail('ad_not_completed');
+ if(gate.state==='consumed')return;
+ await saleItems(env,user,ids);
+ const now=Date.now(),ledger='sale-batch:'+gate.id,marks=ids.map(()=>'?').join(',');
+ const eligible=`user_id=? AND id IN (${marks}) AND sold_at IS NULL AND value>0 AND placed=0`;
+ const authorized="EXISTS(SELECT 1 FROM tree_factory_ad_gates WHERE id=? AND user_id=? AND state='completed')";
+ const results=await env.DB.batch([
+  q(env,`INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,sum(value),'sale',? FROM tree_factory_items WHERE ${eligible} AND ${authorized} HAVING count(*)=? ON CONFLICT DO NOTHING`,ledger,user.id,now,user.id,...ids,gate.id,user.id,ids.length),
+  q(env,`UPDATE tree_factory_items SET sold_at=? WHERE ${eligible} AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id=?) AND ${authorized}`,now,user.id,...ids,ledger,gate.id,user.id),
+  q(env,`UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id=?) AND ${authorized}`,user.id,ledger,gate.id,user.id),
+  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id=?)",gate.id,user.id,ledger)
  ]);
+ if(results[0].meta.changes!==1){await saleItems(env,user,ids);fail('item_unavailable');}
 }
 async function place(env,user,body){
  if(!Number.isSafeInteger(body.revision)||!Array.isArray(body.items)||body.items.length>30||new Set(body.items.map(i=>i.id)).size!==body.items.length)fail('invalid_request');
@@ -186,5 +199,5 @@ export async function handleFactory(request,env){
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','debug_ad_skip_disabled'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','debug_ad_skip_disabled'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
