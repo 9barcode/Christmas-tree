@@ -28,6 +28,8 @@ export default {
     if (path !== '/api/health') return Response.json({error: 'not_found'}, {status: 404});
     if (request.method !== 'GET') return Response.json({error: 'method_not_allowed'}, {status: 405, headers: {Allow: 'GET'}});
     try {
+      // Table existence alone cannot detect an unapplied column migration.
+      await env.DB.prepare('SELECT purpose,business_date,finalized_at,finalization_token FROM tree_factory_payments LIMIT 0').all();
       const {results} = await env.DB.prepare(
         `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${requiredTables.map(() => '?').join(',')})`
       ).bind(...requiredTables).all();
