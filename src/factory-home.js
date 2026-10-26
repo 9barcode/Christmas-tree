@@ -50,7 +50,7 @@ function adButton(text,fn,cls='factory-button ad-action'){const b=button('',fn,c
 function modal(title,content){if($('dialog').open)$('dialog').close();const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
 function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,.tree-utilities button,.sale-actions button,dialog .factory-button').forEach(b=>b.disabled=value);}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
-function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
+function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);syncTreeSaleButton();renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
 const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');
 const debugSkipSwitch=button('',()=>setDebugSkip(!debugAdsSkipped),'debug-skip-switch');debugSkipSwitch.setAttribute('role','switch');debugSkipSwitch.setAttribute('aria-label','광고 스킵 켜기 또는 끄기');
@@ -90,6 +90,29 @@ async function renderTree(){
  }
  $('.pot-back')?.remove();$('.garden').prepend(back);$('.tree').replaceWith(tree);$('.pot').replaceWith(pot);$('.ornaments').replaceChildren(...ornaments);$('.floor').replaceChildren(...floor);
  $('.progress').textContent=`나만의 트리 · 장식 ${snapshot.items.filter(i=>i.placed).length}개`;
+ syncTreeSaleButton();
+}
+function syncTreeSaleButton(){
+ utilities.querySelector('.tree-sale-link')?.remove();
+ const available=snapshot?.collection.length===30&&!snapshot.treeSold;
+ utilities.classList.toggle('has-tree-sale',!!available);
+ if(!available)return;
+ const ready=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
+ const claim=ready?adButton('트리 판매하기 · 50벨',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button('장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
+ claim.disabled=busy||!ready;
+ utilities.append(claim);
+}
+function openTreeSaleConfirmation(){
+ const treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
+ if(!treeReady||snapshot.treeSold)return;
+ const confirm=node('div');
+ confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하고 50벨을 적립해요. 판매한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));
+ confirm.append(adButton('트리 판매하고 50벨 받기',()=>run(async()=>{
+  if(preview){if(!allowDebugAdSkip())return;if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
+  else{const ad=debugAdsSkipped?await factoryDebugAd('tree-sale'):await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
+  $('dialog').close();await renderTree();renderPage();toast('트리를 판매하고 50벨을 적립했어요.');
+ })),button('취소',()=>$('dialog').close()));
+ modal('트리 판매',confirm);
 }
 function showTreeRemoveAction(id,kind,p){
  $('.tree-remove-action')?.remove();
@@ -128,10 +151,7 @@ function renderPage(){
  const header=node('header','factory-header');header.append(button('‹',()=>setPage('tree'),'back-button'),node('h1','',titles[active]),button('?',()=>$('.guide-link').click(),'help-button'));shell.replaceChildren(header);
  if(active==='factory'){renderFactory();placePageBanner();return;}
  const content=node('div','factory-content');shell.append(content);
- if(active==='collection'){
- const summary=node('section','collection-summary');summary.append(node('p','','수집 현황'),node('strong','',`${snapshot.collection.length} / 30`));const progress=node('progress');progress.max=30;progress.value=snapshot.collection.length;progress.setAttribute('aria-label','도감 수집 현황');summary.append(progress,node('p','','장식 30종의 가치 합계 47벨 · 트리 판매 시 50벨 적립'));
- if(snapshot.collection.length===30){const sold=!!snapshot.treeSold,treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;const claim=adButton(sold?'트리 판매 완료 · 50벨 적립':treeReady?'광고 보고 트리 판매 · 50벨':'서로 다른 장식 30개를 트리에 놓아주세요',()=>{if(!treeReady||sold)return;const confirm=node('div');confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하고 50벨을 적립해요. 판매한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));confirm.append(adButton('트리 판매하고 50벨 받기',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}else{const ad=debugAdsSkipped?await factoryDebugAd('tree-sale'):await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});} $('dialog').close();await renderTree();renderPage();toast('트리를 판매하고 50벨을 적립했어요.');})),button('취소',()=>$('dialog').close()));modal('트리 판매',confirm);});claim.disabled=busy||sold||!treeReady;summary.append(claim);}content.append(summary);
- }else{
+ if(active!=='collection'){
  const modes=node('div','inventory-modes');for(const [mode,label] of [[false,'보유 장식'],[true,'판매하기']]){const b=button(label,()=>{selling=mode;saleSelection.clear();renderPage();},selling===mode?'selected':'');modes.append(b);}content.append(modes);
  const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'debug-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('디버그 광고 스킵 · 테스트 포인트 전환 완료');return;}let adRequestId;if(!pending){const ad=debugAdsSkipped?await factoryDebugAd('exchange'):await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId,debugTest:debugAdsSkipped});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
  }
