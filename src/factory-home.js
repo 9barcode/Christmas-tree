@@ -1,6 +1,6 @@
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
-import {factoryCall,factoryAd,factoryDebugAd,recoverFactoryAd} from './factory-client.js';
+import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
 import {startHomeBanner} from './banner.js';
 import {catalog,byId,kstDate,productionBlockReason,defaultFactoryCatalog,drawCatalog} from './factory-model.js';
 import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth,sanitizePositions} from './placement.js';
@@ -10,40 +10,13 @@ import {startCozyFire} from '../assets/backgrounds/cozy-fire.js';
 import {startCozySnow} from '../assets/backgrounds/cozy-room.js';
 import {preparePhoto,savePhoto,sharePhoto} from './photo-save.js';
 const $=s=>document.querySelector(s),urlPreview=new URLSearchParams(location.search).get('preview')==='1';
-let preview=urlPreview,debugMode=false;
+const preview=urlPreview;
 const saleSelection=new Set();
-let snapshot,active='tree',busy=false,filter=0,selling=false,debugAdsSkipped=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
+let snapshot,active='tree',busy=false,filter=0,selling=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
 let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),treeSold:false,productionReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
 function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10});}
 async function load(){if(preview){rollover();snapshot=structuredClone(previewState);}else snapshot=await factoryCall('state');}
 function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,4500);}
-function allowDebugAdSkip(){if(debugAdsSkipped)return true;toast('디버그 메뉴에서 광고 스킵을 켜 주세요.');return false;}
-function openDebugMenu(){
- if(busy)return;
- const content=node('div','debug-menu-content');
- content.append(node('p','',preview?'미리보기에서는 광고와 지급이 로컬에서만 시뮬레이션됩니다.':snapshot.debugAdSkipEnabled?'서버 환경과 관계없이 광고 단계를 건너뛰고 DB 기반 테스트 포인트 전환을 실행합니다.':'광고 스킵을 사용할 수 없습니다.'));
- const toggle=button(debugAdsSkipped?'광고 스킵 끄기':'광고 스킵 켜기',async()=>{
-  if(!preview&&!snapshot.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}
-  $('dialog').close();await setDebugSkip(!debugAdsSkipped);
- },'debug-ad-button');
- toggle.disabled=!preview&&!snapshot.debugAdSkipEnabled;toggle.setAttribute('aria-pressed',String(debugAdsSkipped));content.append(toggle);
- const dialog=$('dialog');dialog.classList.add('debug-dialog');
- modal('디버그 메뉴',content);
- const title=dialog.querySelector('#modal-title');let drag=null;
- title.style.touchAction='none';title.style.cursor='move';
- title.onpointerdown=event=>{
-  if(event.target.closest('button'))return;
-  const rect=dialog.getBoundingClientRect();dialog.style.margin='0';dialog.style.left=rect.left+'px';dialog.style.top=rect.top+'px';dialog.style.transform='none';
-  drag={x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};title.setPointerCapture(event.pointerId);event.preventDefault();
- };
- title.onpointermove=event=>{
-  if(!drag)return;
-  const rect=dialog.getBoundingClientRect(),left=Math.max(0,Math.min(innerWidth-rect.width,drag.left+event.clientX-drag.x)),top=Math.max(0,Math.min(innerHeight-rect.height,drag.top+event.clientY-drag.y));
-  dialog.style.left=left+'px';dialog.style.top=top+'px';
- };
- title.onpointerup=()=>{drag=null;};
- title.onpointercancel=()=>{drag=null;};
-}
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;}
 function button(text,fn,cls='factory-button'){const b=node('button',cls,text);b.type='button';b.disabled=busy;b.onclick=fn;return b;}
 function adButton(text,fn,cls='factory-button ad-action'){const b=button('',fn,cls),icon=node('span','ad-icon');icon.setAttribute('aria-hidden','true');icon.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>광고</span>';b.append(icon,document.createTextNode(text));return b;}
@@ -52,12 +25,6 @@ function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(va
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);syncTreeSaleButton();renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
-const debugLaunch=button('디버그',openDebugMenu,'debug-launch-button');debugLaunch.setAttribute('aria-label','디버그 메뉴 열기');
-const debugSkipSwitch=button('',()=>setDebugSkip(!debugAdsSkipped),'debug-skip-switch');debugSkipSwitch.setAttribute('role','switch');debugSkipSwitch.setAttribute('aria-label','광고 스킵 켜기 또는 끄기');
-const debugControls=node('div','debug-controls');debugControls.append(debugSkipSwitch,debugLaunch);document.body.append(debugControls);
-function syncDebugSkipSwitch(){const enabled=preview||!!snapshot?.debugAdSkipEnabled;debugControls.hidden=!enabled;debugSkipSwitch.disabled=!enabled;debugSkipSwitch.setAttribute('aria-checked',String(debugAdsSkipped));debugSkipSwitch.innerHTML='<span class="debug-radio" aria-hidden="true"></span><span>'+ (debugAdsSkipped?'ON':'OFF') +'</span>';}
-async function setDebugSkip(value){if(!preview&&!snapshot?.debugAdSkipEnabled){toast('광고 스킵을 사용할 수 없어요.');return;}debugAdsSkipped=value;debugMode=value;syncDebugSkipSwitch();await render();toast(value?'광고 스킵 ON':'광고 스킵 OFF');}
-$('dialog').addEventListener('close',()=>{const dialog=$('dialog');dialog.classList.remove('debug-dialog');dialog.style.left='';dialog.style.top='';dialog.style.margin='';dialog.style.transform='';});
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
 const share=button('사진 저장 · 공유',showShare,'photo-link');$('.home-links').append(share);
@@ -124,8 +91,8 @@ function openTreeSaleConfirmation(){
  const confirm=node('div');
  confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하고 50벨을 적립해요. 판매한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));
  confirm.append(adButton('트리 판매하고 50벨 받기',()=>run(async()=>{
-  if(preview){if(!allowDebugAdSkip())return;if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
-  else{const ad=debugAdsSkipped?await factoryDebugAd('tree-sale'):await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
+  if(preview){if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
+  else{const ad=await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
   $('dialog').close();await renderTree();renderPage();toast('트리를 판매하고 50벨을 적립했어요.');
  })),button('취소',()=>$('dialog').close()));
  modal('트리 판매',confirm);
@@ -169,7 +136,7 @@ function renderPage(){
  const content=node('div','factory-content');shell.append(content);
  if(active!=='collection'){
  const modes=node('div','inventory-modes');for(const [mode,label] of [[false,'보유 장식'],[true,'판매하기']]){const b=button(label,()=>{selling=mode;saleSelection.clear();renderPage();},selling===mode?'selected':'');modes.append(b);}content.append(modes);
- const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'debug-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('디버그 광고 스킵 · 테스트 포인트 전환 완료');return;}let adRequestId;if(!pending){const ad=debugAdsSkipped?await factoryDebugAd('exchange'):await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId,debugTest:debugAdsSkipped});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
+ const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'preview-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('미리보기 교환 완료');return;}let adRequestId;if(!pending){const ad=await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
  }
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'벨':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
@@ -186,16 +153,16 @@ function renderPage(){
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 트리에 배치된 장식은 회수한 뒤 판매할 수 있어요.'));
 }
 function renderFactory(){
- const stopped=snapshot.used>=snapshot.limit&&!debugAdsSkipped,scene=node('div','workshop'+(stopped?' stopped':''));
+ const stopped=snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
  scene.setAttribute('aria-label','시안 원본의 산타 장식 공장');
  const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.png';painting.alt='';painting.draggable=false;
  scene.append(painting,node('div','workshop-light'));shell.append(scene);
  stopFactoryScene=startFactoryScene(scene);
  const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));
  const progress=node('progress','factory-production-progress');progress.max=snapshot.limit;progress.value=snapshot.used;progress.setAttribute('aria-label','오늘 생산 진행률');counter.append(progress);scene.append(counter);
- const panel=node('section','production-panel');panel.append(node('p','',debugAdsSkipped?'디버그 모드 · 광고 없이 장식 1개를 생산해요.':'광고를 보고 랜덤 장식 1개를 생산해요.'));
- const unavailable=!preview&&!debugAdsSkipped&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
- const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':debugAdsSkipped?`디버그 생산 가능 · 오늘 ${snapshot.used}회 생산`:`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
+ const panel=node('section','production-panel');panel.append(node('p','','광고를 보고 랜덤 장식 1개를 생산해요.'));
+ const unavailable=!preview&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
+ const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
  const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았어요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
  const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):button('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
@@ -212,13 +179,13 @@ async function requestOvertime(){
   const setupReason=!preview&&productionBlockReason(snapshot);if(setupReason)reasons.push(setupReason);
  }
  if(reasons.length){const content=node('div');reasons.forEach(reason=>content.append(node('p','',reason)));content.append(button('확인',()=>$('dialog').close()));modal('야근수당 안내',content);return;}
- await run(async()=>{if(preview){if(!allowDebugAdSkip())return;previewState.overtime=true;previewState.limit=20;await load();}else{if(debugAdsSkipped)await factoryDebugAd('overtime');else await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');});
+ await run(async()=>{if(preview){previewState.overtime=true;previewState.limit=20;await load();}else{await factoryAd('overtime');await load();}renderPage();toast('공장 재가동! 추가 생산 10회 시작!');});
 }
 async function produceItem(){
- const reason=!preview&&!debugAdsSkipped&&productionBlockReason(snapshot);
+ const reason=!preview&&productionBlockReason(snapshot);
  if(reason){const content=node('div');content.append(node('p','',reason),button('확인',()=>$('dialog').close()));modal('공장 생산 준비 중',content);return;}
  await run(async()=>{
- let result;if(preview){if(!allowDebugAdSkip())return;rollover();if(previewState.used>=previewState.limit&&!debugAdsSkipped)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=debugAdsSkipped?await factoryDebugAd('produce'):await factoryAd('produce');
+ let result;if(preview){rollover();if(previewState.used>=previewState.limit)return;const entry=drawCatalog(defaultFactoryCatalog),a=byId[entry.id],id=crypto.randomUUID();previewState.used++;previewState.items.push({id,asset_id:a.id,value:entry.value,placed:0,x:null,y:null});if(!previewState.collection.includes(a.id))previewState.collection.push(a.id);result={itemId:id};}else result=await factoryAd('produce');
  await load();renderPage();const scene=$('.workshop');scene?.classList.remove('stopped');scene?.classList.add('producing');const skip=button('연출 건너뛰기',()=>{},'skip-production');skip.disabled=false;shell.append(skip);
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
  const item=snapshot.items.find(i=>i.id===result.itemId);if(item)showItem(byId[item.asset_id],[item],true);
@@ -233,8 +200,8 @@ async function sellSelected(){
  const ids=[...saleSelection],items=ids.map(id=>snapshot.items.find(i=>i.id===id));
  if(!items.length||items.length>3||items.some(i=>!i||i.value<=0))return;
   run(async()=>{
-   if(preview){if(!allowDebugAdSkip())return;previewState.balance+=items.reduce((sum,i)=>sum+i.value,0);previewState.items=previewState.items.filter(i=>!ids.includes(i.id));await load();}
-   else{const body={itemIds:ids};const ad=debugAdsSkipped?await factoryDebugAd('sell',body):await factoryAd('sell',body);snapshot=await factoryCall('sell',{...body,adRequestId:ad.requestId});}
+   if(preview){previewState.balance+=items.reduce((sum,i)=>sum+i.value,0);previewState.items=previewState.items.filter(i=>!ids.includes(i.id));await load();}
+   else{const body={itemIds:ids};const ad=await factoryAd('sell',body);snapshot=await factoryCall('sell',{...body,adRequestId:ad.requestId});}
    saleSelection.clear();$('dialog').close();await renderTree();renderPage();toast('판매 금액을 적립했어요.');
   });
 }
@@ -255,7 +222,7 @@ function showItem(a,owned,fresh=false,chosenId=null){
  modal(a.name,c);
 }
 function setPageAfterAction(page){active=page;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';shell.hidden=page==='tree';document.body.dataset.page=page;tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.page===page?'page':'false'));renderPage();}
-async function render(){syncDebugSkipSwitch();await renderTree();renderPage();}
+async function render(){await renderTree();renderPage();}
 async function treePicture(){
  const home=$('.home'),rect=home.getBoundingClientRect(),canvas=document.createElement('canvas');canvas.width=1080;canvas.height=Math.round(rect.height/rect.width*1080)+140;
  const ctx=canvas.getContext('2d'),scale=1080/rect.width;ctx.fillStyle='#fff1d7';ctx.fillRect(0,0,canvas.width,canvas.height);
