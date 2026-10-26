@@ -139,7 +139,7 @@ function renderPage(){
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'벨':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
  const saleMode=active==='inventory'&&selling;content.classList.toggle('has-sale-footer',saleMode);
- const entries=saleMode?catalog.flatMap(a=>snapshot.items.filter(i=>i.asset_id===a.id).map(saleItem=>({a,saleItem}))):catalog.map(a=>({a}));
+ const entries=saleMode?catalog.flatMap(a=>snapshot.items.filter(i=>i.asset_id===a.id&&!i.placed).map(saleItem=>({a,saleItem}))):catalog.map(a=>({a}));
  for(const {a,saleItem} of entries){const value=snapshot.catalog.find(r=>r.id===a.id)?.value;const owned=snapshot.items.filter(i=>i.asset_id===a.id),unlocked=snapshot.collection.includes(a.id);if(filter&&value!==filter)continue;if(active==='inventory'&&!owned.length)continue;
  const openCard=()=>{if(active==='inventory'){showItem(a,owned);}else{const c=node('div');c.append(art(a,!unlocked),node('p','',unlocked?'도감에 영구 등록된 장식이에요.':'공장에서 이 장식을 만나 보세요.'));modal(unlocked?a.name:'아직 만나지 못한 장식',c);}};
  const card=saleMode?node('div','ornament-card sale-card'):button('',openCard,'ornament-card'+(!unlocked&&active==='collection'?' undiscovered':''));
@@ -147,7 +147,7 @@ function renderPage(){
  card.append(art(a,!unlocked&&active==='collection'));
  if(active==='inventory'){card.append(node('span','value-tag',owned.every(i=>i.value===0)?'기존 장식':(saleMode?saleItem.value:(value??owned.find(i=>i.value>0)?.value))+'벨'),node('span','quantity',saleMode?'':'×'+owned.length),node('span','item-name',a.name));if(saleMode?saleItem.placed:owned.some(i=>i.placed))card.append(node('span','placed-badge','트리 배치 중'));}else card.append(node('span','item-name',unlocked?a.name:'?'));grid.append(card);
  }
- content.append(grid);if(saleMode)renderSaleSelection(content);if(!grid.childElementCount)content.append(node('p','empty-state','아직 보관 중인 장식이 없어요. 공장에서 첫 장식을 만들어 보세요!'));
+ content.append(grid);if(saleMode)renderSaleSelection(content);if(!grid.childElementCount){const hasUnplaced=snapshot.items.some(i=>!i.placed),placed=snapshot.items.some(i=>i.placed);const message=saleMode?(hasUnplaced?'선택한 가격의 판매 가능한 장식이 없어요.':placed?'판매할 수 있는 장식이 없어요. 트리에서 장식을 회수해 주세요.':'판매할 장식이 없어요. 공장에서 장식을 생산해 보세요!'):'아직 보관 중인 장식이 없어요. 공장에서 첫 장식을 만들어 보세요!';content.append(node('p','empty-state',message));}
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 트리에 배치된 장식은 회수한 뒤 판매할 수 있어요.'));
 }
 function renderFactory(){
@@ -188,22 +188,18 @@ async function produceItem(){
  await new Promise(resolve=>{let ended=false;function done(){if(ended)return;ended=true;clearTimeout(animationTimer);skip.remove();scene?.classList.remove('producing');resolve();}function finish(){done();}skip.onclick=finish;animationTimer=setTimeout(done,matchMedia('(prefers-reduced-motion: reduce)').matches?0:2200);});
  const item=snapshot.items.find(i=>i.id===result.itemId);if(item)showItem(byId[item.asset_id],[item],true);
  });}
-function blockedSale(){
- const c=node('div');const p=node('p','','판매할 수 없어요.');p.append(document.createElement('br'),document.createTextNode('트리에 배치된 장식이 있어요!'));c.append(p,button('확인',()=>$('dialog').close()));modal('장식 판매',c);
-}
 function renderSaleSelection(content){
- for(const id of saleSelection)if(!snapshot.items.some(i=>i.id===id))saleSelection.delete(id);
+ for(const id of saleSelection)if(!snapshot.items.some(i=>i.id===id&&!i.placed))saleSelection.delete(id);
  const section=node('section','sale-actions');const total=snapshot.items.filter(i=>saleSelection.has(i.id)).reduce((sum,i)=>sum+i.value,0);
  section.append(node('p','',`선택 ${saleSelection.size}/3개 · 총 ${total}벨`));
  const sell=adButton('광고 보고 판매하기',()=>sellSelected());sell.disabled=busy||!saleSelection.size;section.append(sell);document.body.append(section);
 }
 async function sellSelected(){
  const ids=[...saleSelection],items=ids.map(id=>snapshot.items.find(i=>i.id===id));
- if(items.some(i=>i?.placed)){blockedSale();return;}
  if(!items.length||items.length>3||items.some(i=>!i||i.value<=0))return;
   run(async()=>{
    if(preview){if(!allowDebugAdSkip())return;previewState.balance+=items.reduce((sum,i)=>sum+i.value,0);previewState.items=previewState.items.filter(i=>!ids.includes(i.id));await load();}
-   else{try{const body={itemIds:ids};const ad=debugAdsSkipped?await factoryDebugAd('sell',body):await factoryAd('sell',body);snapshot=await factoryCall('sell',{...body,adRequestId:ad.requestId});}catch(error){if(error.code==='item_placed'){blockedSale();return;}throw error;}}
+   else{const body={itemIds:ids};const ad=debugAdsSkipped?await factoryDebugAd('sell',body):await factoryAd('sell',body);snapshot=await factoryCall('sell',{...body,adRequestId:ad.requestId});}
    saleSelection.clear();$('dialog').close();await renderTree();renderPage();toast('판매 금액을 적립했어요.');
   });
 }
