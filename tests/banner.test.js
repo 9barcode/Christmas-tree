@@ -45,11 +45,11 @@ test('config failures do not block or expose an empty advertisement',async()=>{
  await banner.start();assert.equal(region.hidden,true);
 });
 test('public config exposes only banner IDs, not promotion credentials',()=>{
- const c=publicAdConfig({BANNER_TEXT_AD_GROUP_ID:' text ',BANNER_IMAGE_AD_GROUP_ID:' image ',TOSS_PROMOTION_CODE_DAY_15:'private'});
+ const c=publicAdConfig({BANNER_AD_GROUP_ID:' text ',BANNER_IMG_AD_GROUP_ID:' image ',TOSS_PROMOTION_CODE_DAY_15:'private'});
  assert.equal(c.bannerTextAdGroupId,'text');assert.equal(c.bannerImageAdGroupId,'image');assert.equal(JSON.stringify(c).includes('private'),false);
 });
 test('advertising never belongs to the photographed scene',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),home=html.slice(html.indexOf('<main '),html.indexOf('</main>'));
  assert.equal(home.includes('banner-target'),false);assert.equal((html.match(/class="banner-target"/g)||[]).length,3);
- const js=readFileSync(new URL('../src/home.js',import.meta.url),'utf8');assert.ok(js.includes("home.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')"));
+ const js=readFileSync(new URL('../src/factory-home.js',import.meta.url),'utf8');assert.ok(js.includes("home.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')"));
 });

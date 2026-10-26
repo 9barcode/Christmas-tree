@@ -5,8 +5,8 @@
 | Worker 런타임 변수명 | `/api/config`의 `ads` 응답 필드 | 용도 |
 | --- | --- | --- |
 | `INTER_AD_GROUP_ID` | `interstitialAdGroupId` | 장식 획득용 전면광고 |
-| `BANNER_TEXT_AD_GROUP_ID` | `bannerTextAdGroupId` | 문구형 공통. 로딩 텍스트 배너 및 트리 장면 바깥 홈 하단에서 재사용 |
-| `BANNER_IMAGE_AD_GROUP_ID` | `bannerImageAdGroupId` | 이미지형 공통. 로딩 이미지 피드형 배너 |
+| `BANNER_AD_GROUP_ID` | `bannerTextAdGroupId` | 문구형 공통. 로딩 텍스트 배너 및 트리 장면 바깥 홈 하단에서 재사용 |
+| `BANNER_IMG_AD_GROUP_ID` | `bannerImageAdGroupId` | 이미지형 공통. 로딩 이미지 피드형 배너 |
 | `REWARDED_AD_GROUP_ID` | `rewardedAdGroupId` | 트리 추가·완성 후 포인트 교환용 리워드 광고 |
 
 총 4개 변수만 사용한다. 슬롯 번호나 화면 위치별로 별도 광고 변수를 만들지 않는다. 2026-10-20 통합으로 이전 슬롯별 리워드·화면별 배너 변수는 더 이상 읽지 않는다. 서버 담당자는 위 이름으로 재설정하고 새 Worker와 AIT를 함께 적용해야 한다. 기존 캐시된 앱/이전 AIT는 이전 응답 형식을 사용하므로 이전 번들과 혼용하지 않는다.

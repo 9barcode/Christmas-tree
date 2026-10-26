@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs';
 import {publicAdConfig} from '../worker/config.js';
 
 test('ad IDs are mapped from runtime variables without fallback literals',()=>{
- const values={INTER_AD_GROUP_ID:' interstitial-runtime ',BANNER_TEXT_AD_GROUP_ID:' text-runtime ',BANNER_IMAGE_AD_GROUP_ID:' image-runtime ',REWARDED_AD_GROUP_ID:' rewarded-runtime '};
+ const values={INTER_AD_GROUP_ID:' interstitial-runtime ',BANNER_AD_GROUP_ID:' text-runtime ',BANNER_IMG_AD_GROUP_ID:' image-runtime ',REWARDED_AD_GROUP_ID:' rewarded-runtime '};
  const config=publicAdConfig(values);
- assert.deepEqual(config,{interstitialAdGroupId:'interstitial-runtime',bannerTextAdGroupId:'text-runtime',bannerImageAdGroupId:'image-runtime',rewardedAdGroupId:'rewarded-runtime'});
- assert.deepEqual(publicAdConfig({}),{interstitialAdGroupId:'',bannerTextAdGroupId:'',bannerImageAdGroupId:'',rewardedAdGroupId:''});
+ assert.deepEqual(config,{interstitialAdGroupId:'interstitial-runtime',bannerTextAdGroupId:'text-runtime',bannerImageAdGroupId:'image-runtime',bannerAdGroupId:'text-runtime',rewardedAdGroupId:'rewarded-runtime'});
+ assert.deepEqual(publicAdConfig({}),{interstitialAdGroupId:'',bannerTextAdGroupId:'',bannerImageAdGroupId:'',bannerAdGroupId:'',rewardedAdGroupId:''});
  assert.equal(publicAdConfig({INTER_AD_GROUP_ID:123}).interstitialAdGroupId,'');
 });
 test('deploy preserves dashboard variables and never overrides ad IDs from source',()=>{
