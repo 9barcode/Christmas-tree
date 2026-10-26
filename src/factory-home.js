@@ -65,6 +65,7 @@ const camera=node('img');camera.src='assets/ui/painted/camera.webp';camera.alt='
 const utilities=$('.home-links');utilities.classList.add('tree-utilities');document.body.append(utilities);
 new ResizeObserver(()=>document.documentElement.style.setProperty('--page-tabs-height',tabs.getBoundingClientRect().height+'px')).observe(tabs);
 $('.slots').hidden=true;$('.slots').replaceChildren();$('.home footer').hidden=true;
+$('.home').addEventListener('pointerdown',e=>{if(!e.target.closest('.tree-remove-action'))$('.tree-remove-action')?.remove();},true);
 $('.guide-link').onclick=()=>{const c=node('div');c.append(node('p','','광고를 보고 공장에서 장식을 만들어요. 보관함에서 배치하거나 판매할 수 있어요.'),node('p','','하루 기본 10회, 야근 광고를 보면 하루 한 번 10회를 더 생산해요. 생산할 때마다 광고를 시청해요.'),node('p','','최초 획득한 장식은 판매해도 도감에 남아요. 서로 다른 장식 30종을 모으면 장식 가치 합계 47벨인 트리를 판매하고 50벨을 적립해요. 1벨은 1토스포인트로 교환할 수 있어요.'));modal('이용안내',c);};
 $('.rewards-link').onclick=()=>setPage('inventory');$('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 const bounds=new Map();
@@ -76,6 +77,7 @@ async function assetNode(path,className){
  const n=node('div',className);n.innerHTML=`<svg viewBox="${g.box}" preserveAspectRatio="${preserve}" aria-hidden="true"><image href="${path}" width="${g.w}" height="${g.h}"/></svg>`;return n;
 }
 async function renderTree(){
+ $('.tree-remove-action')?.remove();
  const tree=await assetNode('assets/trees/tree-green.png','tree'),pot=await assetNode('assets/planters/planter-wood.png','pot'),back=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
  snapshot.pot=sanitizePositions({__pot:snapshot.pot},[],0).__pot||defaultPosition('pot');
  bindDrag(pot,'pot',null,snapshot.pot,back);
@@ -83,18 +85,31 @@ async function renderTree(){
  for(const i of snapshot.items.filter(i=>i.placed)){
  const a=byId[i.asset_id];if(!a)continue;const n=await assetNode(a.path,a.kind==='floor'?'floor-item':'ornament '+(a.kind==='topper'?'topper':a.kind==='lights'?'lights':''));
  const p=Number.isFinite(i.x)?{x:i.x,y:i.y}:defaultPosition(a.kind,a.kind==='floor'?fi++:oi++);
- if(['lights','topper'].includes(a.kind)){const d=defaultPosition(a.kind);Object.assign(n.style,{width:OBJECT_SIZES[a.kind].w+'%',height:OBJECT_SIZES[a.kind].h+'%',left:d.x+'%',top:d.y+'%',transform:'translate(-50%,-50%)'});}else bindDrag(n,a.kind,i.id,p);
+ if(['lights','topper'].includes(a.kind)){const d=defaultPosition(a.kind);Object.assign(n.style,{width:OBJECT_SIZES[a.kind].w+'%',height:OBJECT_SIZES[a.kind].h+'%',left:d.x+'%',top:d.y+'%',transform:'translate(-50%,-50%)'});bindTapToRemove(n,i.id,a.kind,d);}else bindDrag(n,a.kind,i.id,p);
  (a.kind==='floor'?floor:ornaments).push(n);
  }
  $('.pot-back')?.remove();$('.garden').prepend(back);$('.tree').replaceWith(tree);$('.pot').replaceWith(pot);$('.ornaments').replaceChildren(...ornaments);$('.floor').replaceChildren(...floor);
  $('.progress').textContent=`나만의 트리 · 장식 ${snapshot.items.filter(i=>i.placed).length}개`;
 }
+function showTreeRemoveAction(id,kind,p){
+ $('.tree-remove-action')?.remove();
+ const action=button('빼기',()=>run(async()=>{
+  const item=snapshot.items.find(i=>i.id===id);if(!item?.placed)return;
+  item.placed=0;await saveLayout();await renderTree();toast('장식을 보관함으로 옮겼어요.');
+ }),'tree-remove-action');
+ action.setAttribute('aria-label','이 장식을 트리에서 빼서 보관함으로 이동');
+ const size=OBJECT_SIZES[kind];action.style.left=Math.max(10,Math.min(90,p.x))+'%';action.style.top=Math.max(7,p.y-(size?.h||6)/2)+'%';$('.garden').append(action);
+}
+function bindTapToRemove(n,id,kind,p){
+ n.classList.add('tree-decoration-tappable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label','장식을 선택해 보관함으로 이동');
+ const select=()=>{if(!busy)showTreeRemoveAction(id,kind,p);};n.addEventListener('click',select);n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}};
+}
 function bindDrag(n,kind,id,initial,back){let p=initial,drag;
- n.classList.add('draggable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label',id?`${byId[snapshot.items.find(i=>i.id===id)?.asset_id]?.name||'장식'} 위치 옮기기`:'화분 위치 옮기기');
+ n.classList.add('draggable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label',id?`${byId[snapshot.items.find(i=>i.id===id)?.asset_id]?.name||'장식'} 위치 옮기기 또는 회수하기`:'화분 위치 옮기기');
  function paint(){for(const target of [n,back].filter(Boolean)){Object.assign(target.style,{width:OBJECT_SIZES[kind].w+'%',height:OBJECT_SIZES[kind].h+'%',left:p.x+'%',top:p.y+'%',transform:'translate(-50%,-50%)'});const z=target===back?0:floorDepth(kind,p.y);if(z!==null)target.style.zIndex=z;}}paint();
- n.onpointerdown=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},rect:$('.garden').getBoundingClientRect()};n.setPointerCapture(e.pointerId);n.classList.add('is-dragging');tabs.inert=true;};
- n.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;p=clampPosition(kind,drag.p.x+(e.clientX-drag.x)/drag.rect.width*100,drag.p.y+(e.clientY-drag.y)/drag.rect.height*100);paint();};
- function finish(e,cancel){if(!drag||drag.pointer!==e.pointerId)return;const start=drag.p;drag=null;n.classList.remove('is-dragging');tabs.inert=false;if(n.hasPointerCapture(e.pointerId))n.releasePointerCapture(e.pointerId);if(cancel){p=start;paint();return;}run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();await renderTree();});}
+ n.onpointerdown=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},rect:$('.garden').getBoundingClientRect(),moved:false};n.setPointerCapture(e.pointerId);n.classList.add('is-dragging');tabs.inert=true;};
+ n.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)<6)return;drag.moved=true;p=clampPosition(kind,drag.p.x+dx/drag.rect.width*100,drag.p.y+dy/drag.rect.height*100);paint();};
+ function finish(e,cancel){if(!drag||drag.pointer!==e.pointerId)return;const start=drag.p,moved=drag.moved;drag=null;n.classList.remove('is-dragging');tabs.inert=false;if(n.hasPointerCapture(e.pointerId))n.releasePointerCapture(e.pointerId);if(cancel){p=start;paint();return;}if(!moved){if(id)showTreeRemoveAction(id,kind,p);return;}run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();await renderTree();});}
  n.onpointerup=e=>finish(e,false);n.onpointercancel=e=>finish(e,true);n.onlostpointercapture=e=>finish(e,true);
  n.onkeydown=e=>{const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!delta||busy)return;e.preventDefault();p=clampPosition(kind,p.x+delta[0],p.y+delta[1]);paint();run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();});};
 }
@@ -129,7 +144,7 @@ function renderPage(){
  const card=saleMode?node('div','ornament-card sale-card'):button('',openCard,'ornament-card'+(!unlocked&&active==='collection'?' undiscovered':''));
  if(saleMode){const checked=saleSelection.has(saleItem.id),disabled=busy||saleItem.value<=0||(!checked&&saleSelection.size>=3);card.classList.toggle('sale-disabled',disabled&&!checked);card.classList.toggle('sale-selected',checked);const check=document.createElement('input');check.type='checkbox';check.className='sale-checkbox';check.checked=checked;check.disabled=disabled;check.setAttribute('aria-label',a.name+' '+(saleItem.placed?'트리 배치 중 ':'')+'판매 선택');check.onchange=()=>{if(check.checked){if(saleSelection.size>=3)return;saleSelection.add(saleItem.id);}else saleSelection.delete(saleItem.id);renderPage();};card.append(check);}
  card.append(art(a,!unlocked&&active==='collection'));
- if(active==='inventory'){card.append(node('span','value-tag',owned.every(i=>i.value===0)?'기존 장식':(saleMode?saleItem.value:(value??owned.find(i=>i.value>0)?.value))+'벨'),node('span','quantity',saleMode?(saleItem.placed?'배치 중':''):'×'+owned.length),node('span','item-name',a.name));}else card.append(node('span','item-name',unlocked?a.name:'?'));grid.append(card);
+ if(active==='inventory'){card.append(node('span','value-tag',owned.every(i=>i.value===0)?'기존 장식':(saleMode?saleItem.value:(value??owned.find(i=>i.value>0)?.value))+'벨'),node('span','quantity',saleMode?(saleItem.placed?'배치 중':''):'×'+owned.length),node('span','item-name',a.name));if(!saleMode&&owned.some(i=>i.placed))card.append(node('span','placed-badge','트리 배치'));}else card.append(node('span','item-name',unlocked?a.name:'?'));grid.append(card);
  }
  content.append(grid);if(saleMode)renderSaleSelection(content);if(!grid.childElementCount)content.append(node('p','empty-state','아직 보관 중인 장식이 없어요. 공장에서 첫 장식을 만들어 보세요!'));
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 트리에 배치된 장식은 회수한 뒤 판매할 수 있어요.'));
