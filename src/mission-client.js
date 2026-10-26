@@ -6,7 +6,7 @@ function reportApiEvent(path,method,status,durationMs){
   const base=apiBaseUrl.endsWith('/')?apiBaseUrl.slice(0,-1):apiBaseUrl;
   const endpoint=base+'/api/analytics/events';
   const body=JSON.stringify({endpoint:path,method,status,durationMs:Math.min(60000,Math.max(0,Math.round(durationMs)))});
-  void fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.token},body,signal:AbortSignal.timeout(5000),credentials:'omit'}).catch(()=>{});
+  void fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.token},body,signal:AbortSignal.timeout(5000),credentials:'omit',keepalive:true}).catch(()=>{});
 }
 export async function request(path,body,authenticated=true) {
   if(authenticated)await ensureMissionSession();
