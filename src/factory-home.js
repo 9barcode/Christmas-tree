@@ -66,8 +66,15 @@ const utilities=$('.home-links');utilities.classList.add('tree-utilities');docum
 new ResizeObserver(()=>document.documentElement.style.setProperty('--page-tabs-height',tabs.getBoundingClientRect().height+'px')).observe(tabs);
 $('.slots').hidden=true;$('.slots').replaceChildren();$('.home footer').hidden=true;
 $('.home').addEventListener('pointerdown',e=>{if(!e.target.closest('.tree-remove-action'))$('.tree-remove-action')?.remove();},true);
-$('.guide-link').onclick=()=>{const c=node('div');c.append(node('p','','광고를 보고 공장에서 장식을 만들어요. 보관함에서 배치하거나 판매할 수 있어요.'),node('p','','하루 기본 10회, 야근 광고를 보면 하루 한 번 10회를 더 생산해요. 생산할 때마다 광고를 시청해요.'),node('p','','최초 획득한 장식은 판매해도 도감에 남아요. 서로 다른 장식 30종을 모으면 장식 가치 합계 47벨인 트리를 판매하고 50벨을 적립해요. 1벨은 1토스포인트로 교환할 수 있어요.'));modal('이용안내',c);};
-$('.rewards-link').onclick=()=>setPage('inventory');$('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+function showGuide(){
+ const c=node('div','guide-content');
+ c.append(node('p','','공장에서 광고를 보고 하루 기본 10개, 야근 리워드 광고로 추가 10개까지 장식을 만들어요.'),node('p','','보관함의 장식을 트리와 러그에 배치하고, 트리 장식은 눌러 회수할 수 있어요.'),node('p','','장식을 팔거나 완성한 트리를 판매해 벨을 모아요. 도감 30종을 모아 트리를 완성하면 50벨을 받고, 1벨은 토스포인트 1P로 교환할 수 있어요.'));
+ modal('이용안내',c);
+}
+function showRewards(){setPage('inventory');}
+$('.guide-link').onclick=showGuide;
+$('.rewards-link').onclick=showRewards;
+$('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 const bounds=new Map();
 async function assetNode(path,className){
  let g=bounds.get(path);if(!g){const img=new Image();img.src=path;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);const data=ctx.getImageData(0,0,c.width,c.height).data;let x0=c.width,y0=c.height,x1=0,y1=0;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(data[(y*c.width+x)*4+3]>16){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}g={box:`${x0} ${y0} ${x1-x0+1} ${y1-y0+1}`,w:c.width,h:c.height};bounds.set(path,g);}
@@ -148,7 +155,7 @@ function renderPage(){
  if(!snapshot)return;tabs.querySelectorAll('button').forEach(b=>b.disabled=busy);
  if(active==='tree'){placePageBanner();return;}
  const titles={factory:'장식 공장',inventory:'보관함',collection:'장식 도감'};
- const header=node('header','factory-header');header.append(button('‹',()=>setPage('tree'),'back-button'),node('h1','',titles[active]),button('?',()=>$('.guide-link').click(),'help-button'));shell.replaceChildren(header);
+ const header=node('header','factory-header');header.append(button('‹',()=>setPage('tree'),'back-button'),node('h1','',titles[active]),button('?',showGuide,'help-button'));shell.replaceChildren(header);
  if(active==='factory'){renderFactory();placePageBanner();return;}
  const content=node('div','factory-content');shell.append(content);
  if(active!=='collection'){

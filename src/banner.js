@@ -1,6 +1,7 @@
 import {loadServiceConfig} from './service-config.js';
 
 const initialized=new WeakMap();
+export function rectanglesOverlap(a,b){return a.width>0&&a.height>0&&b.width>0&&b.height>0&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}
 function initialize(sdk){
  if(initialized.has(sdk))return initialized.get(sdk);
  const ready=new Promise((resolve,reject)=>{
@@ -64,13 +65,17 @@ export function startHomeBanner(){
  };
  place();
  const banner=createBanner({region,target,configKey:'bannerAdGroupId',variant:'card'});
- const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
-  const covered=entries.some(entry=>entry.isIntersecting);
-  document.querySelector('.tree-utilities')?.classList.toggle('banner-in-view',covered);
- },{threshold:.1}):null;
+ const updateUtilities=()=>{
+  const utilities=document.querySelector('.tree-utilities');
+  const onTree=!!utilities&&document.body.dataset.page==='tree'&&!utilities.hidden;
+  const covered=onTree&&!region.hidden&&rectanglesOverlap(utilities.getBoundingClientRect(),region.getBoundingClientRect());
+  utilities?.classList.toggle('banner-in-view',covered);
+ };
+ const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(updateUtilities,{threshold:[0,.1,1]}):null;
  observer?.observe(region);
+ window.addEventListener('scroll',updateUtilities,{passive:true});window.addEventListener('resize',updateUtilities);
  const start=()=>{place();banner.start().catch(()=>banner.stop())};
- const stop=()=>{observer?.disconnect();banner.stop()};
+ const stop=()=>{observer?.disconnect();window.removeEventListener('scroll',updateUtilities);window.removeEventListener('resize',updateUtilities);banner.stop()};
  window.addEventListener('pagehide',stop,{once:true});
  window.addEventListener('pageshow',event=>{if(event.persisted){observer?.observe(region);start()}});
  start();

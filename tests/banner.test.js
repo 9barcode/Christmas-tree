@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createBanner} from '../src/banner.js';
+import {createBanner,rectanglesOverlap} from '../src/banner.js';
 import {publicAdConfig} from '../worker/config.js';
 import {readFileSync} from 'node:fs';
 
@@ -47,6 +47,14 @@ test('config failures do not block or expose an empty advertisement',async()=>{
 test('public config exposes only banner IDs, not promotion credentials',()=>{
  const c=publicAdConfig({BANNER_AD_GROUP_ID:' text ',BANNER_IMG_AD_GROUP_ID:' image ',TOSS_PROMOTION_CODE_DAY_15:'private'});
  assert.equal(c.bannerTextAdGroupId,'text');assert.equal(c.bannerImageAdGroupId,'image');assert.equal(JSON.stringify(c).includes('private'),false);
+});
+test('tree utility visibility is affected only when a banner physically overlaps it',()=>{
+ const utilities={left:10,top:700,right:390,bottom:790,width:380,height:90};
+ const bannerBelow={left:0,top:810,right:400,bottom:900,width:400,height:90};
+ const bannerBehindUtilities={left:0,top:760,right:400,bottom:850,width:400,height:90};
+ assert.equal(rectanglesOverlap(utilities,bannerBelow),false);
+ assert.equal(rectanglesOverlap(utilities,bannerBehindUtilities),true);
+ assert.equal(rectanglesOverlap(utilities,{left:0,top:0,right:400,bottom:0,width:400,height:0}),false);
 });
 test('advertising never belongs to the photographed scene',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),home=html.slice(html.indexOf('<main '),html.indexOf('</main>'));
