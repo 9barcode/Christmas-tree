@@ -79,8 +79,8 @@ async function assetNode(path,className){
 async function renderTree(){
  $('.tree-remove-action')?.remove();
  const tree=await assetNode('assets/trees/tree-green.png','tree'),pot=await assetNode('assets/planters/planter-wood.png','pot'),back=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
- snapshot.pot=sanitizePositions({__pot:snapshot.pot},[],0).__pot||defaultPosition('pot');
- bindDrag(pot,'pot',null,snapshot.pot,back);
+ snapshot.pot=defaultPosition('pot');
+ for(const target of [pot,back])Object.assign(target.style,{width:OBJECT_SIZES.pot.w+'%',height:OBJECT_SIZES.pot.h+'%',left:snapshot.pot.x+'%',top:snapshot.pot.y+'%',transform:'translate(-50%,-50%)',zIndex:String(target===back?0:floorDepth('pot',snapshot.pot.y))});
  const ornaments=[],floor=[];let oi=0,fi=0;
  for(const i of snapshot.items.filter(i=>i.placed)){
  const a=byId[i.asset_id];if(!a)continue;const n=await assetNode(a.path,a.kind==='floor'?'floor-item':'ornament '+(a.kind==='topper'?'topper':a.kind==='lights'?'lights':''));
@@ -97,20 +97,21 @@ function showTreeRemoveAction(id,kind,p){
   const item=snapshot.items.find(i=>i.id===id);if(!item?.placed)return;
   item.placed=0;await saveLayout();await renderTree();toast('장식을 보관함으로 옮겼어요.');
  }),'tree-remove-action');
- action.setAttribute('aria-label','이 장식을 트리에서 빼서 보관함으로 이동');
+ action.dataset.itemId=id;action.setAttribute('aria-label','이 장식을 트리에서 빼서 보관함으로 이동');
  const size=OBJECT_SIZES[kind];action.style.left=Math.max(10,Math.min(90,p.x))+'%';action.style.top=Math.max(7,p.y-(size?.h||6)/2)+'%';$('.garden').append(action);
 }
 function bindTapToRemove(n,id,kind,p){
  n.classList.add('tree-decoration-tappable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label','장식을 선택해 보관함으로 이동');
  const select=()=>{if(!busy)showTreeRemoveAction(id,kind,p);};n.addEventListener('click',select);n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}};
 }
-function bindDrag(n,kind,id,initial,back){let p=initial,drag;
+function bindDrag(n,kind,id,initial,back){let p=initial,drag,suppressClick=false;
  n.classList.add('draggable');n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label',id?`${byId[snapshot.items.find(i=>i.id===id)?.asset_id]?.name||'장식'} 위치 옮기기 또는 회수하기`:'화분 위치 옮기기');
  function paint(){for(const target of [n,back].filter(Boolean)){Object.assign(target.style,{width:OBJECT_SIZES[kind].w+'%',height:OBJECT_SIZES[kind].h+'%',left:p.x+'%',top:p.y+'%',transform:'translate(-50%,-50%)'});const z=target===back?0:floorDepth(kind,p.y);if(z!==null)target.style.zIndex=z;}}paint();
  n.onpointerdown=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,p:{...p},rect:$('.garden').getBoundingClientRect(),moved:false};n.setPointerCapture(e.pointerId);n.classList.add('is-dragging');tabs.inert=true;};
- n.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)<6)return;drag.moved=true;p=clampPosition(kind,drag.p.x+dx/drag.rect.width*100,drag.p.y+dy/drag.rect.height*100);paint();};
- function finish(e,cancel){if(!drag||drag.pointer!==e.pointerId)return;const start=drag.p,moved=drag.moved;drag=null;n.classList.remove('is-dragging');tabs.inert=false;if(n.hasPointerCapture(e.pointerId))n.releasePointerCapture(e.pointerId);if(cancel){p=start;paint();return;}if(!moved){if(id)showTreeRemoveAction(id,kind,p);return;}run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();await renderTree();});}
+ n.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)<12)return;drag.moved=true;p=clampPosition(kind,drag.p.x+dx/drag.rect.width*100,drag.p.y+dy/drag.rect.height*100);paint();};
+ function finish(e,cancel){if(!drag||drag.pointer!==e.pointerId)return;const start=drag.p,moved=drag.moved;drag=null;n.classList.remove('is-dragging');tabs.inert=false;if(n.hasPointerCapture(e.pointerId))n.releasePointerCapture(e.pointerId);if(cancel){p=start;paint();return;}if(!moved){if(id)showTreeRemoveAction(id,kind,p);return;}suppressClick=true;setTimeout(()=>{suppressClick=false;},0);run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();await renderTree();});}
  n.onpointerup=e=>finish(e,false);n.onpointercancel=e=>finish(e,true);n.onlostpointercapture=e=>finish(e,true);
+ n.addEventListener('click',e=>{if(!id||busy||suppressClick||e.detail===0)return;if($('.tree-remove-action')?.dataset.itemId!==id)showTreeRemoveAction(id,kind,p);});
  n.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&id){e.preventDefault();showTreeRemoveAction(id,kind,p);return;}const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!delta||busy)return;e.preventDefault();p=clampPosition(kind,p.x+delta[0],p.y+delta[1]);paint();run(async()=>{if(id)Object.assign(snapshot.items.find(i=>i.id===id),p);else snapshot.pot=p;await saveLayout();});};
 }
 async function saveLayout(){const body={revision:snapshot.revision,pot:snapshot.pot?.x?snapshot.pot:defaultPosition('pot'),items:snapshot.items.filter(i=>i.placed).map(i=>({id:i.id,x:i.x,y:i.y}))};if(preview){previewState.items=structuredClone(snapshot.items);previewState.pot=body.pot;previewState.revision++;await load();}else snapshot=await factoryCall('layout',body);}
