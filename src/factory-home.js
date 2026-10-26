@@ -77,7 +77,7 @@ function showGuide(){
   guideCard('assets/factory/santa.webp','하루 10개씩 만들어요','장식을 모아 트리를 꾸며요.'),
   guideCard('assets/thumbnails/gift-burgundy.webp','하루 10개 더 만들어요','추가 장식도 모을 수 있어요.'),
   guideCard('assets/trees/tree-green.png','원하는 곳에 꾸며요','장식과 선물은 드래그해 옮겨요.'),
-  guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50벨','도감 30종을 모아 트리를 완성해요.'),
+  guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50P','도감 30종을 모아 트리를 완성해요.'),
   guideCard('assets/thumbnails/bell-brass.webp','벨을 포인트로 바꿔요','1벨은 토스포인트 1P예요.')
  );
  modal('트리 꾸미기 이용안내',c);$('dialog').classList.add('guide-dialog');
@@ -110,23 +110,29 @@ async function renderTree(){
 }
 function syncTreeSaleButton(){
  utilities.querySelector('.tree-sale-link')?.remove();
+ const payment=snapshot?.treeSalePayment;
+ if(payment&&!['succeeded','failed'].includes(payment.state)){
+  const check=button('트리 판매 50P 지급 결과 확인',()=>run(async()=>{snapshot=await factoryCall('recover',{});await render();toastTreeSale();}),'factory-button tree-sale-link');
+  utilities.classList.add('has-tree-sale');utilities.append(check);return;
+ }
  const available=snapshot?.collection.length===30&&!snapshot.treeSold;
  utilities.classList.toggle('has-tree-sale',!!available);
  if(!available)return;
  const ready=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
- const claim=ready?adButton('트리 판매하기 · 50벨',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button('장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
+ const claim=ready?adButton('트리 판매하기 · 50P',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button('장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
  claim.disabled=busy||!ready;
  utilities.append(claim);
 }
+function toastTreeSale(){const p=snapshot.treeSalePayment||snapshot.payments.find(p=>p.purpose==='tree-sale');toast(preview?'미리보기 트리 판매 완료':p?.state==='succeeded'?(p.mode==='test'?'트리 판매 테스트 완료 · 실제 지급 없음':'트리 판매 50P 지급 완료'):p?.state==='failed'?'지급 실패 · 장식을 보관함으로 돌려드렸어요.':'트리 판매 50P 지급 결과를 확인 중이에요.');}
 function openTreeSaleConfirmation(){
  const treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  if(!treeReady||snapshot.treeSold)return;
  const confirm=node('div');
- confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하고 50벨을 적립해요. 판매한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));
- confirm.append(adButton('트리 판매하고 50벨 받기',()=>run(async()=>{
-  if(preview){if(!allowDebugAdSkip())return;if(!previewState.treeSold){previewState.treeSold=true;previewState.balance+=50;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
-  else{const ad=debugAdsSkipped?await factoryDebugAd('tree-sale'):await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
-  $('dialog').close();await renderTree();renderPage();toast('트리를 판매하고 50벨을 적립했어요.');
+ confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하고 토스포인트 50P를 받아요. 판매한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));
+ confirm.append(adButton('트리 판매하고 50P 받기',()=>run(async()=>{
+  if(preview){if(!allowDebugAdSkip())return;if(!previewState.treeSold){previewState.treeSold=true;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
+  else{const ad=debugAdsSkipped?await factoryDebugAd('tree-sale'):await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId,debugTest:debugAdsSkipped});}
+  $('dialog').close();await renderTree();renderPage();toastTreeSale();
  })),button('취소',()=>$('dialog').close()));
  modal('트리 판매',confirm);
 }
@@ -169,7 +175,7 @@ function renderPage(){
  const content=node('div','factory-content');shell.append(content);
  if(active!=='collection'){
  const modes=node('div','inventory-modes');for(const [mode,label] of [[false,'보유 장식'],[true,'판매하기']]){const b=button(label,()=>{selling=mode;saleSelection.clear();renderPage();},selling===mode?'selected':'');modes.append(b);}content.append(modes);
- const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'debug-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('디버그 광고 스킵 · 테스트 포인트 전환 완료');return;}let adRequestId;if(!pending){const ad=debugAdsSkipped?await factoryDebugAd('exchange'):await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId,debugTest:debugAdsSkipped});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
+ const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>p.purpose!=='tree-sale'&&!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'debug-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('디버그 광고 스킵 · 테스트 포인트 전환 완료');return;}let adRequestId;if(!pending){const ad=debugAdsSkipped?await factoryDebugAd('exchange'):await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId,debugTest:debugAdsSkipped});renderPage();const last=snapshot.payments.find(p=>p.purpose!=='tree-sale');toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
  }
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'벨':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
@@ -299,5 +305,3 @@ async function reconnect(){if(preview||busy||document.hidden)return;await run(as
 window.addEventListener('tree:home-ready',reconnect);window.addEventListener('focus',reconnect);document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('factory-paused',document.hidden);if(!document.hidden)reconnect();});
 setInterval(()=>{if(!preview&&kstDate()!==lastDate)reconnect();},60000);
 // Let a short result timer settle on pagehide; rewards have already been committed.
-
-

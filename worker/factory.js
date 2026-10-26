@@ -35,10 +35,11 @@ async function view(env,user){
  q(env,"SELECT purpose,count(*) AS n FROM tree_factory_requests WHERE user_id=? AND date=? AND state='completed' GROUP BY purpose",user.id,kstDate()).all(),
  q(env,'SELECT * FROM tree_factory_layout WHERE user_id=?',user.id).first(),
  q(env,'SELECT COALESCE(sum(amount),0) AS n FROM tree_factory_ledger WHERE user_id=?',user.id).first(),
- q(env,'SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
+ q(env,'SELECT id,amount,mode,state,purpose FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 20',user.id).all()]);
  const rows=configured(env),overtime=usage.results.some(r=>r.purpose==='overtime'),used=usage.results.find(r=>r.purpose==='produce')?.n||0;
+ const treePayment=await q(env,"SELECT id,amount,mode,state FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND state<>'failed' ORDER BY created_at DESC LIMIT 1",user.id).first();
  const treeSale=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=?",'tree-sale:'+user.id).first();
- return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(user),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
+ return {version:3,date:kstDate(),used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold:!!treeSale||!!treePayment,treeSalePayment:treePayment,treeSaleReady:!!env.TOSS_MTLS&&!!String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim(),catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,debugAdSkipEnabled:debugAdSkipEnabled(user),exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 function saleIds(body){
  const ids=body.itemIds===undefined?[body.itemId]:body.itemIds;
@@ -58,6 +59,8 @@ async function reserve(env,user,body,allowDebugSkip=false){
   if(body.purpose==='sell'){
    const ids=saleIds(body);await saleItems(env,user,ids);itemId=saleKey(ids);
   }else if(body.purpose==='tree-sale'){
+   if(!env.TOSS_MTLS||!String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim())fail('tree_sale_not_configured');
+   const payment=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND state<>'failed'",user.id).first();if(payment)fail('tree_already_sold');
    const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
    const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
    const placed=await q(env,'SELECT count(DISTINCT asset_id) AS n FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1',user.id).first();if(placed.n!==30)fail('tree_not_ready');
@@ -145,19 +148,26 @@ async function place(env,user,body){
  const results=await env.DB.batch(ops);if(results[0].meta.changes!==1)fail('positions_conflict');
 }
 async function sellTree(env,user,body){
+ const active=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND state<>'failed'",user.id).first();
+ if(active){await advanceFactoryPayment(env,user,active.id);return;}
+ const debugTest=body.debugTest===true;
+ if(debugTest&&!debugAdSkipEnabled(user))fail('debug_ad_skip_disabled');
+ const mode=debugTest?'test':String(env.TOSS_PROMOTION_MODE||'live'),raw=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
+ if(!['live','test'].includes(mode)||!raw||!env.TOSS_MTLS||(mode==='live'&&raw.startsWith('TEST_')))fail('tree_sale_not_configured');
  if(typeof body.adRequestId!=='string')fail('invalid_request');
  const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
  if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
- const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
  const prior=await q(env,'SELECT id FROM tree_factory_ledger WHERE id=?','tree-sale:'+user.id).first();if(prior)fail('tree_already_sold');
- const placed=await q(env,'SELECT count(DISTINCT asset_id) AS n FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1',user.id).first();if(placed.n!==30)fail('tree_not_ready');
- const now=Date.now();
- await env.DB.batch([
-  q(env,"INSERT INTO tree_factory_ledger(id,user_id,amount,kind,created_at) SELECT ?,?,50,'tree_sale',? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 ON CONFLICT DO NOTHING",'tree-sale:'+user.id,user.id,now,user.id),
-  q(env,"UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND sold_at IS NULL AND placed=1",now,user.id),
-  q(env,'UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?',user.id),
-  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed'",gate.id,user.id)
+ const id='tree-sale:'+gate.id,now=Date.now();
+ const authorized="EXISTS(SELECT 1 FROM tree_factory_payments p JOIN tree_factory_ad_gates g ON p.id='tree-sale:'||g.id WHERE p.id=? AND p.user_id=? AND g.state='completed')";
+ const results=await env.DB.batch([
+  q(env,`INSERT INTO tree_factory_payments(id,user_id,mode,promotion_code,debug_test,purpose,amount,state,created_at,updated_at) SELECT ?,?,?,?,?,'tree-sale',50,'creating',?,? WHERE (SELECT count(*) FROM tree_factory_collection WHERE user_id=?)=30 AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1)=30 AND NOT EXISTS(SELECT 1 FROM tree_factory_ledger WHERE id=?) AND NOT EXISTS(SELECT 1 FROM tree_factory_payments WHERE user_id=? AND state NOT IN ('succeeded','failed')) AND EXISTS(SELECT 1 FROM tree_factory_ad_gates WHERE id=? AND user_id=? AND state='completed') ON CONFLICT DO NOTHING`,id,user.id,mode,mode==='test'&&!raw.startsWith('TEST_')?'TEST_'+raw:raw,debugTest?1:0,now,now,user.id,user.id,'tree-sale:'+user.id,user.id,gate.id,user.id),
+  q(env,`UPDATE tree_factory_items SET sold_at=?,placed=0,tree_sale_payment_id=? WHERE user_id=? AND sold_at IS NULL AND placed=1 AND ${authorized}`,now,id,user.id,id,user.id),
+  q(env,`UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=? AND ${authorized}`,user.id,id,user.id),
+  q(env,`UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND ${authorized}`,gate.id,user.id,id,user.id)
  ]);
+ if(results[0].meta.changes!==1)fail('tree_not_ready');
+ await advanceFactoryPayment(env,user,id);
 }
 async function exchange(env,user,body){
  const debugTest=body.debugTest===true;
@@ -195,9 +205,9 @@ export async function handleFactory(request,env){
  if(route==='layout')await place(env,user,body);
  if(route==='exchange')await exchange(env,user,body);
  if(route==='recover'){
- const rows=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? ORDER BY created_at DESC LIMIT 5",user.id).all();
+ const rows=await q(env,"SELECT id FROM tree_factory_payments WHERE user_id=? ORDER BY CASE WHEN state NOT IN ('succeeded','failed') THEN 0 ELSE 1 END,created_at DESC LIMIT 5",user.id).all();
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','debug_ad_skip_disabled'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_already_sold','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','tree_sale_not_configured','debug_ad_skip_disabled'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
