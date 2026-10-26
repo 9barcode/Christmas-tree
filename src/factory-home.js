@@ -48,7 +48,7 @@ function node(tag,className,text){const n=document.createElement(tag);if(classNa
 function button(text,fn,cls='factory-button'){const b=node('button',cls,text);b.type='button';b.disabled=busy;b.onclick=fn;return b;}
 function adButton(text,fn,cls='factory-button ad-action'){const b=button('',fn,cls),icon=node('span','ad-icon');icon.setAttribute('aria-hidden','true');icon.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>광고</span>';b.append(icon,document.createTextNode(text));return b;}
 function modal(title,content){if($('dialog').open)$('dialog').close();const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
-function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,.tree-utilities button,dialog .factory-button').forEach(b=>b.disabled=value);}
+function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,.tree-utilities button,.sale-actions button,dialog .factory-button').forEach(b=>b.disabled=value);}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);renderPage();}
 const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');document.body.append(shell);
@@ -105,7 +105,7 @@ function placePageBanner(){
  if(active==='tree')$('.home').after(region);else shell.after(region);
 }
 function renderPage(){
- stopFactoryScene();stopFactoryScene=()=>{};shell.classList.toggle('concept-factory',active==='factory');
+ document.querySelector('.sale-actions')?.remove();stopFactoryScene();stopFactoryScene=()=>{};shell.classList.toggle('concept-factory',active==='factory');
  if(!snapshot)return;tabs.querySelectorAll('button').forEach(b=>b.disabled=busy);
  if(active==='tree'){placePageBanner();return;}
  const titles={factory:'장식 공장',inventory:'보관함',collection:'장식 도감'};
@@ -122,7 +122,7 @@ function renderPage(){
  }
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'벨':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
- const saleMode=active==='inventory'&&selling;
+ const saleMode=active==='inventory'&&selling;content.classList.toggle('has-sale-footer',saleMode);
  const entries=saleMode?catalog.flatMap(a=>snapshot.items.filter(i=>i.asset_id===a.id).map(saleItem=>({a,saleItem}))):catalog.map(a=>({a}));
  for(const {a,saleItem} of entries){const value=snapshot.catalog.find(r=>r.id===a.id)?.value;const owned=snapshot.items.filter(i=>i.asset_id===a.id),unlocked=snapshot.collection.includes(a.id);if(filter&&value!==filter)continue;if(active==='inventory'&&!owned.length)continue;
  const openCard=()=>{if(active==='inventory'){showItem(a,owned);}else{const c=node('div');c.append(art(a,!unlocked),node('p','',unlocked?'도감에 영구 등록된 장식이에요.':'공장에서 이 장식을 만나 보세요.'));modal(unlocked?a.name:'아직 만나지 못한 장식',c);}};
@@ -179,7 +179,7 @@ function renderSaleSelection(content){
  for(const id of saleSelection)if(!snapshot.items.some(i=>i.id===id))saleSelection.delete(id);
  const section=node('section','sale-actions');const total=snapshot.items.filter(i=>saleSelection.has(i.id)).reduce((sum,i)=>sum+i.value,0);
  section.append(node('p','',`선택 ${saleSelection.size}/3개 · 총 ${total}벨`));
- const sell=adButton('광고 보고 판매하기',()=>sellSelected());sell.disabled=busy||!saleSelection.size;section.append(sell);content.append(section);
+ const sell=adButton('광고 보고 판매하기',()=>sellSelected());sell.disabled=busy||!saleSelection.size;section.append(sell);document.body.append(section);
 }
 async function sellSelected(){
  const ids=[...saleSelection],items=ids.map(id=>snapshot.items.find(i=>i.id===id));

@@ -82,3 +82,8 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .sale-card .sale-checkbox:disabled{cursor:default}
 .sale-actions{margin:12px 0;padding:12px 14px;background:#fff0ce;border:1px solid #ca9d62;border-radius:17px;text-align:center}
 .sale-actions p{margin:0 0 8px;color:#633e24}
+
+.sale-actions{position:fixed;left:50%;bottom:calc(var(--page-tabs-height,88px) + 8px);z-index:55;width:min(calc(100% - 28px),512px);margin:0;padding:8px 11px;transform:translateX(-50%);box-shadow:0 4px 14px #21140c66;box-sizing:border-box}
+.sale-actions p{margin:0 0 4px;font-size:14px;line-height:1.2}
+.sale-actions .factory-button{margin:0;padding:10px 8px;font-size:17px}
+.factory-content.has-sale-footer{padding-bottom:104px}
