@@ -120,14 +120,18 @@ function renderPage(){
  const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}원`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=adButton(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(!allowDebugAdSkip())return;if(previewState.balance<1){toast('교환할 포인트가 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'debug-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('디버그 광고 스킵 · 테스트 포인트 전환 완료');return;}let adRequestId;if(!pending){const ad=debugAdsSkipped?await factoryDebugAd('exchange'):await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId,debugTest:debugAdsSkipped});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet);
  if(snapshot.payments.length){const history=node('details','payment-history');history.append(node('summary','','최근 교환 내역'));const status={creating:'접수 중',ready:'지급 준비',submitted:'지급 확인 중',pending:'확인 중',succeeded:'완료',failed:'실패 · 잔액 복원'};for(const p of snapshot.payments)history.append(node('p','',`${p.amount}원 · ${p.mode==='test'?'테스트 · ':''}${status[p.state]||p.state}`));content.append(history);}
  }
- if(active==='inventory'&&selling)renderSaleSelection(content);
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'원':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
- for(const a of catalog){const value=snapshot.catalog.find(r=>r.id===a.id)?.value;const owned=snapshot.items.filter(i=>i.asset_id===a.id),unlocked=snapshot.collection.includes(a.id);if(filter&&value!==filter)continue;if(active==='inventory'&&!owned.length)continue;
- const card=button('',()=>{if(active==='inventory'){if(selling)pickSaleItems(a,owned);else showItem(a,owned);}else{const c=node('div');c.append(art(a,!unlocked),node('p','',unlocked?'도감에 영구 등록된 장식이에요.':'공장에서 이 장식을 만나 보세요.'));modal(unlocked?a.name:'아직 만나지 못한 장식',c);}},'ornament-card'+(!unlocked&&active==='collection'?' undiscovered':''));card.append(art(a,!unlocked&&active==='collection'));
- if(active==='inventory'){card.append(node('span','value-tag',owned.every(i=>i.value===0)?'기존 장식':(value??owned.find(i=>i.value>0)?.value)+'원'),node('span','quantity','×'+owned.length),node('span','item-name',a.name));}else card.append(node('span','item-name',unlocked?a.name:'?'));grid.append(card);
+ const saleMode=active==='inventory'&&selling;
+ const entries=saleMode?catalog.flatMap(a=>snapshot.items.filter(i=>i.asset_id===a.id).map(saleItem=>({a,saleItem}))):catalog.map(a=>({a}));
+ for(const {a,saleItem} of entries){const value=snapshot.catalog.find(r=>r.id===a.id)?.value;const owned=snapshot.items.filter(i=>i.asset_id===a.id),unlocked=snapshot.collection.includes(a.id);if(filter&&value!==filter)continue;if(active==='inventory'&&!owned.length)continue;
+ const openCard=()=>{if(active==='inventory'){showItem(a,owned);}else{const c=node('div');c.append(art(a,!unlocked),node('p','',unlocked?'도감에 영구 등록된 장식이에요.':'공장에서 이 장식을 만나 보세요.'));modal(unlocked?a.name:'아직 만나지 못한 장식',c);}};
+ const card=saleMode?node('div','ornament-card sale-card'):button('',openCard,'ornament-card'+(!unlocked&&active==='collection'?' undiscovered':''));
+ if(saleMode){const checked=saleSelection.has(saleItem.id),disabled=busy||saleItem.value<=0||(!checked&&saleSelection.size>=3);card.classList.toggle('sale-disabled',disabled&&!checked);card.classList.toggle('sale-selected',checked);const check=document.createElement('input');check.type='checkbox';check.className='sale-checkbox';check.checked=checked;check.disabled=disabled;check.setAttribute('aria-label',a.name+' '+(saleItem.placed?'트리 배치 중 ':'')+'판매 선택');check.onchange=()=>{if(check.checked){if(saleSelection.size>=3)return;saleSelection.add(saleItem.id);}else saleSelection.delete(saleItem.id);renderPage();};card.append(check);}
+ card.append(art(a,!unlocked&&active==='collection'));
+ if(active==='inventory'){card.append(node('span','value-tag',owned.every(i=>i.value===0)?'기존 장식':(saleMode?saleItem.value:(value??owned.find(i=>i.value>0)?.value))+'원'),node('span','quantity',saleMode?(saleItem.placed?'배치 중':''):'×'+owned.length),node('span','item-name',a.name));}else card.append(node('span','item-name',unlocked?a.name:'?'));grid.append(card);
  }
- content.append(grid);if(!grid.childElementCount)content.append(node('p','empty-state','아직 보관 중인 장식이 없어요. 공장에서 첫 장식을 만들어 보세요!'));
+ content.append(grid);if(saleMode)renderSaleSelection(content);if(!grid.childElementCount)content.append(node('p','empty-state','아직 보관 중인 장식이 없어요. 공장에서 첫 장식을 만들어 보세요!'));
  if(active==='inventory')content.append(node('p','fine-print','판매한 장식도 도감에 남아요. 트리에 배치된 장식은 회수한 뒤 판매할 수 있어요.'));
 }
 function renderFactory(){
@@ -171,35 +175,23 @@ async function produceItem(){
 function blockedSale(){
  const c=node('div');const p=node('p','','판매할 수 없어요.');p.append(document.createElement('br'),document.createTextNode('트리에 배치된 장식이 있어요!'));c.append(p,button('확인',()=>$('dialog').close()));modal('장식 판매',c);
 }
-function pickSaleItems(a,owned){
- const c=node('div');c.append(node('p','','판매할 장식을 선택해 주세요. 전체 최대 3개까지 선택할 수 있어요.'));
- for(const item of owned){
-  const label=node('label');label.style.cssText='display:flex;gap:10px;align-items:center;padding:12px 0';
-  const check=document.createElement('input');check.type='checkbox';check.checked=saleSelection.has(item.id);check.disabled=item.value<=0;
-  check.onchange=()=>{if(check.checked){if(saleSelection.size>=3){check.checked=false;toast('최대 3개까지 선택할 수 있어요.');return;}saleSelection.add(item.id);}else saleSelection.delete(item.id);};
-  label.append(check,document.createTextNode(a.name+' · '+item.value+'원'+(item.placed?' · 트리 배치 중':'')));c.append(label);
- }
- c.append(button('선택 완료',()=>{$('dialog').close();renderPage();}));modal('판매 장식 선택',c);
-}
 function renderSaleSelection(content){
  for(const id of saleSelection)if(!snapshot.items.some(i=>i.id===id))saleSelection.delete(id);
- const section=node('section','production-panel');section.append(node('p','',`판매할 장식 ${saleSelection.size} / 3개 · 1~3개 선택 가능`));
- for(const id of saleSelection){const i=snapshot.items.find(i=>i.id===id);section.append(button(byId[i.asset_id].name+' · '+i.value+'원 ×',()=>{saleSelection.delete(id);renderPage();}));}
- const sell=adButton('선택한 장식 판매하기',()=>sellSelected());sell.disabled=busy||!saleSelection.size;section.append(sell);content.append(section);
+ const section=node('section','sale-actions');const total=snapshot.items.filter(i=>saleSelection.has(i.id)).reduce((sum,i)=>sum+i.value,0);
+ section.append(node('p','',`선택 ${saleSelection.size}/3개 · 총 ${total}원`));
+ const sell=adButton('광고 보고 판매하기',()=>sellSelected());sell.disabled=busy||!saleSelection.size;section.append(sell);content.append(section);
 }
 async function sellSelected(){
  const ids=[...saleSelection],items=ids.map(id=>snapshot.items.find(i=>i.id===id));
  if(items.some(i=>i?.placed)){blockedSale();return;}
  if(!items.length||items.length>3||items.some(i=>!i||i.value<=0))return;
- const c=node('div');c.append(node('p','',`선택한 ${items.length}개를 총 ${items.reduce((sum,i)=>sum+i.value,0)}원에 판매할까요?`),adButton('광고 보고 판매 확정',()=>{
-  if(ids.some(id=>snapshot.items.find(i=>i.id===id)?.placed)){blockedSale();return;}
   run(async()=>{
    if(preview){if(!allowDebugAdSkip())return;previewState.balance+=items.reduce((sum,i)=>sum+i.value,0);previewState.items=previewState.items.filter(i=>!ids.includes(i.id));await load();}
    else{try{const body={itemIds:ids};const ad=debugAdsSkipped?await factoryDebugAd('sell',body):await factoryAd('sell',body);snapshot=await factoryCall('sell',{...body,adRequestId:ad.requestId});}catch(error){if(error.code==='item_placed'){blockedSale();return;}throw error;}}
    saleSelection.clear();$('dialog').close();await renderTree();renderPage();toast('판매 금액을 적립했어요.');
   });
- }),button('취소',()=>$('dialog').close()));modal('장식 판매',c);
 }
+
 function showItem(a,owned,fresh=false,chosenId=null){
  const c=node('div','item-detail');c.append(art(a),node('p','',fresh?'새 장식이 도착했어요! 도감에 등록했어요.':`보유 ${owned.length}개 · 트리 배치 ${owned.filter(i=>i.placed).length}개`));
  const item=owned.find(i=>i.id===chosenId)||(selling?owned.find(i=>i.value>0):null)||owned.find(i=>!i.placed)||owned[0];if(owned.length>1){const select=node('select','instance-picker');select.setAttribute('aria-label','사용할 장식 선택');owned.forEach((i,index)=>{const o=node('option','',`${index+1}번째 · ${i.value?i.value+'원':'기존 장식'} · ${i.placed?'배치 중':'보관 중'}`);o.value=i.id;o.selected=i.id===item.id;select.append(o);});select.onchange=()=>showItem(a,owned,false,select.value);c.append(select);}c.append(node('p','',item.value?`판매 가치 ${item.value}원`:'기존 트리에서 보존한 장식 · 판매 대상 아님'));

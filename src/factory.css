@@ -70,4 +70,15 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .debug-dialog .debug-ad-button{width:100%;border:1px solid #9d3025;border-radius:14px;padding:12px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;font:inherit;font-size:17px}
 .debug-dialog .debug-ad-button[aria-pressed=true]{background:linear-gradient(#477d4a,#286545);border-color:#33613e}
 
-.page-banner{position:relative;width:min(100%,540px);margin:10px auto calc(var(--page-tabs-height,88px) + 16px);display:flex;flex-direction:column;padding:0;background:#fff8e9;border:1px solid #cda86f;border-radius:14px;box-shadow:0 3px 12px #28170f33;box-sizing:border-box;overflow:visible}.page-banner[hidden]{display:none}.page-banner .banner-target{width:100%;min-height:90px;overflow:visible;background:#fff}.banner-in-view{visibility:hidden!important;pointer-events:none!important}\n.concept-factory .ad-icon{display:none}\n
+.page-banner{position:relative;width:min(100%,540px);margin:10px auto calc(var(--page-tabs-height,88px) + 16px);display:flex;flex-direction:column;padding:0;background:#fff8e9;border:1px solid #cda86f;border-radius:14px;box-shadow:0 3px 12px #28170f33;box-sizing:border-box;overflow:visible}.page-banner[hidden]{display:none}.page-banner .banner-target{width:100%;min-height:90px;overflow:visible;background:#fff}.banner-in-view{visibility:hidden!important;pointer-events:none!important}
+.concept-factory .ad-icon{display:none}
+
+
+/* Direct per-item selection on the selling grid. */
+.sale-card input.sale-checkbox{position:absolute;top:9px;right:9px;width:20px;height:20px;margin:0;accent-color:#39734a;cursor:pointer;z-index:2}
+.sale-card .value-tag{left:5px;right:auto}
+.sale-card.sale-selected{outline:2px solid #39734a;outline-offset:-2px}
+.sale-card.sale-disabled{filter:grayscale(1);opacity:.5}
+.sale-card .sale-checkbox:disabled{cursor:default}
+.sale-actions{margin:12px 0;padding:12px 14px;background:#fff0ce;border:1px solid #ca9d62;border-radius:17px;text-align:center}
+.sale-actions p{margin:0 0 8px;color:#633e24}
