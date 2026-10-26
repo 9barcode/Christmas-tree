@@ -22,6 +22,16 @@ async function provider(env, user, path, body) {
 const read = (env,user,id) => env.DB.prepare('SELECT * FROM tree_factory_payments WHERE user_id = ? AND id = ?').bind(user.id,id).first();
 async function finalize(env,user,payment) {
   if (!payment || !['succeeded','failed'].includes(payment.state)) return;
+  if (payment.purpose === 'tree-sale') {
+    // A direct promotion never debits or refunds the bell wallet.
+    if (payment.state === 'failed') {
+      await env.DB.batch([
+        env.DB.prepare('UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=?)').bind(user.id,user.id,payment.id),
+        env.DB.prepare('UPDATE tree_factory_items SET sold_at=NULL,placed=0,tree_sale_payment_id=NULL WHERE user_id=? AND tree_sale_payment_id=?').bind(user.id,payment.id),
+      ]);
+    }
+    return;
+  }
   // Wallet debit was reserved atomically. Test success releases it; live success consumes it.
   if (payment.debug_test === 1 && payment.state === 'succeeded') return;
   if (payment.mode !== 'test' && payment.state !== 'failed') return;
