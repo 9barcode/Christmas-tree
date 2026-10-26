@@ -47,7 +47,7 @@ function openDebugMenu(){
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;}
 function button(text,fn,cls='factory-button'){const b=node('button',cls,text);b.type='button';b.disabled=busy;b.onclick=fn;return b;}
 function adButton(text,fn,cls='factory-button ad-action'){const b=button('',fn,cls),icon=node('span','ad-icon');icon.setAttribute('aria-hidden','true');icon.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>광고</span>';b.append(icon,document.createTextNode(text));return b;}
-function modal(title,content){if($('dialog').open)$('dialog').close();const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
+function modal(title,content){if($('dialog').open)$('dialog').close();$('dialog').classList.remove('guide-dialog');const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
 function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));document.querySelectorAll('.factory-shell button,.page-tabs button,.home button,.tree-utilities button,.sale-actions button,dialog .factory-button').forEach(b=>b.disabled=value);}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);syncTreeSaleButton();renderPage();}
@@ -66,14 +66,23 @@ const utilities=$('.home-links');utilities.classList.add('tree-utilities');docum
 new ResizeObserver(()=>document.documentElement.style.setProperty('--page-tabs-height',tabs.getBoundingClientRect().height+'px')).observe(tabs);
 $('.slots').hidden=true;$('.slots').replaceChildren();$('.home footer').hidden=true;
 $('.home').addEventListener('pointerdown',e=>{if(!e.target.closest('.tree-remove-action'))$('.tree-remove-action')?.remove();},true);
+function guideCard(image,title,description){
+ const row=node('section','guide-card'),img=node('img'),copy=node('div');
+ img.src=image;img.alt='';img.loading='lazy';
+ copy.append(node('strong','',title),node('p','',description));row.append(img,copy);return row;
+}
 function showGuide(){
  const c=node('div','guide-content');
- c.append(node('p','','공장에서 광고를 보고 하루 기본 10개, 야근 리워드 광고로 추가 10개까지 장식을 만들어요.'),node('p','','보관함의 장식을 트리와 러그에 배치하고, 트리 장식은 눌러 회수할 수 있어요.'),node('p','','장식을 팔거나 완성한 트리를 판매해 벨을 모아요. 도감 30종을 모아 트리를 완성하면 50벨을 받고, 1벨은 토스포인트 1P로 교환할 수 있어요.'));
- modal('이용안내',c);
+ c.append(
+  guideCard('assets/factory/santa.webp','하루 10개씩 만들어요','전면광고를 보고 장식을 생산해요.'),
+  guideCard('assets/thumbnails/gift-burgundy.webp','하루 10개 더 만들어요','리워드 광고로 추가 생산할 수 있어요.'),
+  guideCard('assets/trees/tree-green.png','원하는 곳에 꾸며요','장식과 선물은 드래그해 옮겨요.'),
+  guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50벨','도감 30종을 모아 트리를 완성해요.'),
+  guideCard('assets/thumbnails/bell-brass.webp','벨을 포인트로 바꿔요','1벨은 토스포인트 1P예요.')
+ );
+ modal('트리 꾸미기 이용안내',c);$('dialog').classList.add('guide-dialog');
 }
-function showRewards(){setPage('inventory');}
 $('.guide-link').onclick=showGuide;
-$('.rewards-link').onclick=showRewards;
 $('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 const bounds=new Map();
 async function assetNode(path,className){

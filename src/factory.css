@@ -50,16 +50,15 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .concept-factory .overtime-panel.is-overtime>p{background:#efd09b;color:#99754e}
 .concept-factory .overtime-panel.is-overtime .overtime-button{background:linear-gradient(#dc663c,#c54b2c);color:#fff8e6!important;border:1px solid #ac4e25}
 .concept-factory .overtime-panel small{top:82%;height:16%;display:flex;align-items:center;justify-content:center;background:#edcb94;font-size:2.65cqw}
-.tree-utilities{position:fixed;left:50%;bottom:calc(var(--page-tabs-height,88px) + 8px);transform:translateX(-50%);width:min(92vw,500px);margin:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:46px 46px;gap:6px;z-index:61}
-.tree-utilities.has-tree-sale{grid-template-rows:46px 46px 46px}
+.tree-utilities{position:fixed;left:50%;bottom:calc(var(--page-tabs-height,88px) + 8px);transform:translateX(-50%);width:min(92vw,500px);margin:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:46px;gap:6px;z-index:61}
+.tree-utilities.has-tree-sale{grid-template-rows:46px 46px}
 .tree-utilities button{display:flex;min-width:0;width:100%;align-items:center;justify-content:center;gap:5px;min-height:42px;padding:7px 8px;border:0;border-radius:0;box-shadow:none;background:transparent url('../assets/ui/painted/button-cream.webp') center/100% 100% no-repeat;color:#55321e;font-size:clamp(12px,3vw,15px);white-space:nowrap}
 .tree-utilities img{width:25px;height:25px;object-fit:contain;flex:none}
-.tree-utilities .photo-link{grid-column:1/-1;grid-row:1;border:2px solid #c49a56;border-radius:999px;background:linear-gradient(110deg,#3f7b51,#1e583f);color:#fff5d7;box-shadow:inset 0 2px 0 #e8d39166,0 3px 6px #21140c66;font-size:clamp(14px,3.6vw,17px)}
+.tree-utilities .photo-link{grid-column:2;grid-row:1;border:2px solid #c49a56;border-radius:999px;background:linear-gradient(110deg,#3f7b51,#1e583f);color:#fff5d7;box-shadow:inset 0 2px 0 #e8d39166,0 3px 6px #21140c66;font-size:clamp(12px,3vw,15px)}
 .tree-utilities .photo-link:before{content:'✦';color:#f3d27b;margin-right:3px}
 .tree-utilities .photo-link img{width:22px;height:22px;filter:brightness(0) invert(1)}
-.tree-utilities .guide-link{grid-column:1;grid-row:2}
-.tree-utilities .rewards-link{grid-column:2;grid-row:2}
-.tree-utilities .tree-sale-link{grid-column:1/-1;grid-row:3;min-height:46px;border:2px solid #a62f22;border-radius:999px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;box-shadow:inset 0 2px #ffd08155,0 3px 6px #21140c66;font-size:clamp(15px,3.8vw,18px)}
+.tree-utilities .guide-link{grid-column:1;grid-row:1}
+.tree-utilities .tree-sale-link{grid-column:1/-1;grid-row:2;min-height:46px;border:2px solid #a62f22;border-radius:999px;background:linear-gradient(#df5537,#b73324);color:#fff6dc;box-shadow:inset 0 2px #ffd08155,0 3px 6px #21140c66;font-size:clamp(15px,3.8vw,18px)}
 .tree-utilities .tree-sale-link .ad-icon{background:#98251d}
 .tree-utilities .tree-sale-link:disabled{opacity:.72}
 .tree-utilities button:disabled{opacity:.65}
