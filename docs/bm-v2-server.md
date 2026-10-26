@@ -28,8 +28,35 @@
 
 배치도 서버에 저장한다. revision이 다르면 다른 화면의 배치를 덮어쓰지 않고 최신 상태를 불러온다. 기존 로컬 저장 키는 삭제·덮어쓰기하지 않는다. 기존 사용자 기록 이관과 반복 회차 정책은 별도 확정 후 적용하며 이번에는 자동 소급이나 트리 재시작을 제공하지 않는다. 완성 트리 사진 저장·공유는 지급 성공과 분리한다.
 
+## 앱 분석 이벤트
+
+인증된 앱에서 `/api/v2/*` 및 `/api/v3/*` 요청을 보낼 때, 클라이언트가 요청 경로·HTTP 메서드·응답 상태·소요 시간만 별도로 기록합니다. 요청 본문, 광고 식별자, IP 주소 및 Toss 식별자는 이벤트에 넣지 않습니다. 네트워크 실패는 상태 코드 `0`으로 기록합니다. 로그 저장 실패는 앱 동작에 영향을 주지 않습니다.
+
+서버는 `tree_analytics_events`에 사용자별 이벤트를 저장하며 사용자당 최근 10,000건을 유지합니다. Cloudflare D1에서 아래 쿼리로 최근 30일의 API 요청량과 실패율을 확인할 수 있습니다.
+
+```sql
+SELECT endpoint, method, status, COUNT(*) AS events,
+       ROUND(AVG(duration_ms)) AS avg_duration_ms
+FROM tree_analytics_events
+WHERE created_at >= datetime('now', '-30 days')
+GROUP BY endpoint, method, status
+ORDER BY events DESC;
+```
+
+특정 기능의 일별 사용량:
+
+```sql
+SELECT date(created_at) AS day, endpoint, COUNT(*) AS requests,
+       COUNT(DISTINCT user_id) AS users
+FROM tree_analytics_events
+WHERE created_at >= datetime('now', '-30 days')
+GROUP BY day, endpoint
+ORDER BY day DESC, endpoint;
+```
+
+오류/서버 실패 확인은 `status >= 400` 조건으로 필터링합니다. API 경로는 데이터베이스에 저장되므로 인증된 서비스 요청만 기록되며, 사용자별 최대 10,000건을 넘는 오래된 로그는 자동 정리됩니다.
 ## 배포
 
-`0004_bm_positions.sql`까지 마이그레이션 후 Worker를 배포하고 새 AIT를 빌드한다. 광고 ID는 이미 Worker에 설정한 네 변수를 유지하며 `keep_vars: true`를 변경하지 않는다. 추가로 실제 교환에는 `TOSS_PROMOTION_CODE_EXCHANGE`와 mTLS 바인딩이 필요하다. 출석용 코드를 교환용으로 임의 대체하지 않는다. `TREE_API_BASE_URL`은 AIT 빌드 저장소 Variable에 Worker의 HTTPS 주소로 설정한다. 이전 BM 원장과 복구 API는 유지한다.
+배포할 때 저장소에서 `npm run db:migrate:remote`로 `podomoa-db`에 새 마이그레이션을 적용한 뒤 `npm run worker:deploy`로 Worker를 배포한다. 앱 코드도 포함되므로 GitHub Actions에서 새 AIT 빌드를 실행해 앱인토스에 반영한다. 분석 수집에는 새 시크릿이나 Wrangler 변수가 필요하지 않다. `TREE_API_BASE_URL`은 기존처럼 Worker의 HTTPS 주소를 가리켜야 한다. 분석 이벤트는 배포 이후 발생한 API 요청부터 쌓인다. Cloudflare 대시보드의 D1 Console에서 위 SQL을 실행하면 집계할 수 있다. 광고 ID와 `keep_vars: true` 설정은 변경하지 않는다. 실제 교환에는 기존 안내와 같이 `TOSS_PROMOTION_CODE_EXCHANGE`와 mTLS 바인딩이 필요하다.
 
-테스트 코드는 추가·실행하지 않았다. 빌드, Worker dry-run, JS·마이그레이션 구문과 미리보기 화면을 확인한다. 실제 SDK 노출·리워드 이벤트 및 프로모션 지급은 토스 실기기에서 확인해야 한다.
+이번 PR에서는 테스트나 빌드, Worker dry-run을 실행하지 않았다. 배포 후 실제 앱 트래픽으로 이벤트 수집과 D1 쿼리 결과를 확인해야 한다.
