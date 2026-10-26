@@ -44,7 +44,8 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .concept-factory .production-panel>.factory-button{background:none;border:0;box-shadow:none;color:transparent;filter:none}
 .concept-factory .production-panel.is-stopped>.factory-button{background:linear-gradient(110deg,#477d4a,#33683e);color:#fff8e6;border:1px solid #396843}
 .concept-factory .production-panel>p:last-child{top:76%;left:13%;width:74%;height:21%;display:flex;align-items:center;justify-content:center;background:#efd09b;line-height:1.25}
-.concept-factory .overtime-panel h2,.concept-factory .overtime-panel>p{background:none;color:transparent}
+.concept-factory .overtime-panel h2{background:none;color:transparent}
+.concept-factory .overtime-panel>p{width:64%;background:#efd09b;color:#99754e;font-size:2.8cqw}
 .concept-factory .overtime-button{background:none;border:0;box-shadow:none;color:transparent!important;filter:none!important}
 .concept-factory .overtime-panel.is-overtime>p{background:#efd09b;color:#99754e}
 .concept-factory .overtime-panel.is-overtime .overtime-button{background:linear-gradient(#dc663c,#c54b2c);color:#fff8e6!important;border:1px solid #ac4e25}

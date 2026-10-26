@@ -139,7 +139,7 @@ function renderFactory(){
  const panel=node('section','production-panel');panel.append(node('p','',debugAdsSkipped?'디버그 모드 · 광고 없이 장식 1개를 생산해요.':'광고를 보고 랜덤 장식 1개를 생산해요.'));
  const unavailable=!preview&&!debugAdsSkipped&&!!productionBlockReason(snapshot);panel.classList.toggle('is-unavailable',unavailable);
  const produce=stopped?button('오늘 생산을 모두 마쳤어요',()=>produceItem()):unavailable?button('생산 준비 상태 확인',()=>produceItem()):button('보고 장식 생산하기',()=>produceItem());produce.disabled=busy||stopped;panel.append(produce,node('p','',unavailable?'생산 설정이 아직 완료되지 않았어요.':debugAdsSkipped?`디버그 생산 가능 · 오늘 ${snapshot.used}회 생산`:`오늘 남은 생산 ${Math.max(0,snapshot.limit-snapshot.used)}회`));shell.append(panel);
- const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았대요!'));
+ const overtime=node('section','overtime-panel');overtime.append(node('h2','','오늘은 여기까지!'),node('p','',snapshot.overtime?'산타가 야근 중! 오늘도 힘내고 있어요.':'그래도… 산타가 아직 할 일이 남았어요!'));
  overtime.classList.toggle('is-overtime',snapshot.overtime);panel.classList.toggle('is-stopped',stopped);
  const b=snapshot.overtime?button('오늘 야근수당 지급 완료',requestOvertime,'factory-button overtime-button'):button('야근수당 주고 공장 재가동!',requestOvertime,'factory-button overtime-button');
  b.disabled=busy;
