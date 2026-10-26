@@ -57,6 +57,6 @@ ORDER BY day DESC, endpoint;
 오류/서버 실패 확인은 `status >= 400` 조건으로 필터링합니다. API 경로는 데이터베이스에 저장되므로 인증된 서비스 요청만 기록되며, 사용자별 최대 10,000건을 넘는 오래된 로그는 자동 정리됩니다.
 ## 배포
 
-`0004_bm_positions.sql`까지 마이그레이션 후 Worker를 배포하고 새 AIT를 빌드한다. 광고 ID는 이미 Worker에 설정한 네 변수를 유지하며 `keep_vars: true`를 변경하지 않는다. 추가로 실제 교환에는 `TOSS_PROMOTION_CODE_EXCHANGE`와 mTLS 바인딩이 필요하다. 출석용 코드를 교환용으로 임의 대체하지 않는다. `TREE_API_BASE_URL`은 AIT 빌드 저장소 Variable에 Worker의 HTTPS 주소로 설정한다. 이전 BM 원장과 복구 API는 유지한다.
+배포할 때 저장소에서 `npm run db:migrate:remote`로 `podomoa-db`에 새 마이그레이션을 적용한 뒤 `npm run worker:deploy`로 Worker를 배포한다. 앱 코드도 포함되므로 GitHub Actions에서 새 AIT 빌드를 실행해 앱인토스에 반영한다. 분석 수집에는 새 시크릿이나 Wrangler 변수가 필요하지 않다. `TREE_API_BASE_URL`은 기존처럼 Worker의 HTTPS 주소를 가리켜야 한다. 분석 이벤트는 배포 이후 발생한 API 요청부터 쌓인다. Cloudflare 대시보드의 D1 Console에서 위 SQL을 실행하면 집계할 수 있다. 광고 ID와 `keep_vars: true` 설정은 변경하지 않는다. 실제 교환에는 기존 안내와 같이 `TOSS_PROMOTION_CODE_EXCHANGE`와 mTLS 바인딩이 필요하다.
 
-새 `0010_analytics_events.sql` 마이그레이션을 추가하고, 앱 API 호출 기록을 위한 인증된 Worker 수집 경로를 연결한다. 테스트 코드는 추가·실행하지 않았다. 빌드, Worker dry-run, JS·마이그레이션 구문과 미리보기 화면을 확인한다. 실제 SDK 노출·리워드 이벤트 및 프로모션 지급은 토스 실기기에서 확인해야 한다.
+이번 PR에서는 테스트나 빌드, Worker dry-run을 실행하지 않았다. 배포 후 실제 앱 트래픽으로 이벤트 수집과 D1 쿼리 결과를 확인해야 한다.
