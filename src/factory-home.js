@@ -121,7 +121,8 @@ function showTreeSaleResult(kind='pending',detail=''){
 function showTreeSaleResultFromSnapshot(){
  const payment=snapshot?.payments?.find(p=>p.purpose==='tree-sale');
  if(payment?.state==='failed')showTreeSaleResult('failed');
- else if(payment?.state==='succeeded'&&!snapshot.treeSalePending)showTreeSaleResult(payment.mode==='test'?'test':'success');
+ else if(payment?.state==='succeeded'&&!snapshot.treeSalePending&&snapshot.items.filter(i=>i.placed).length===0)showTreeSaleResult(payment.mode==='test'?'test':'success');
+ else if(payment?.state==='succeeded')showTreeSaleResult('unknown','50P 지급은 성공했지만 장식 소모가 확인되지 않았어요. 지급 내역을 유지하고 다시 확인해 주세요.');
  else showTreeSaleResult('pending');
 }
 function openTreeSaleConfirmation(){
@@ -144,7 +145,7 @@ function openTreeSaleConfirmation(){
    // Ad proof is journaled. Recover an existing request; never trigger another ad or claim here.
    try{snapshot=await factoryCall('recover',{});await renderTree();renderPage();}catch{/* Keep prior snapshot. */}
    const payment=snapshot?.payments?.find(p=>p.purpose==='tree-sale');
-   if(payment?.state==='succeeded'&&!snapshot.treeSalePending)showTreeSaleResultFromSnapshot();
+   if(payment?.state==='succeeded')showTreeSaleResultFromSnapshot();
    else if(payment?.state==='failed')showTreeSaleResult('failed');
    else showTreeSaleResult('unknown',error.message||'잠시 후 다시 확인해 주세요.');
   }
