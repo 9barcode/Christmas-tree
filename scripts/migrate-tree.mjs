@@ -44,3 +44,12 @@ if(auditTables.some(r=>r.results?.length)){
  const audit=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT g.id AS grant_id,substr(g.user_id,-8) AS account_suffix,g.owned_before,g.inserted_count,g.completed_at,(SELECT count(DISTINCT asset_id) FROM tree_factory_items i WHERE i.user_id=g.user_id AND i.sold_at IS NULL) AS owned_types,(SELECT count(*) FROM tree_factory_collection c WHERE c.user_id=g.user_id) AS collection_types FROM tree_admin_decoration_grants g ORDER BY g.id"],true));
  console.log('Decoration grant audit:',JSON.stringify(audit.flatMap(r=>r.results??[])));
 }
+
+// Aggregate-only diagnostics: no user IDs, session tokens, or provider keys.
+const resetAuditTable=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT name FROM sqlite_master WHERE name='tree_test_reset_20261027_users'"],true));
+if(resetAuditTable.some(r=>r.results?.length)){
+ for(const [label,sql] of [["Pre-release reset audit","SELECT (SELECT count(*) FROM tree_test_reset_20261027_users) AS reset_accounts,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%') AS granted_items,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%' AND sold_at IS NULL) AS remaining_granted_items,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%' AND placed=1 AND sold_at IS NULL) AS placed_granted_items"],["Tree sale inventory audit","SELECT p.state,p.mode,p.finalized_at IS NOT NULL AS finalized,count(*) AS payments,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NOT NULL)) AS consumed_items,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NULL)) AS reserved_items FROM tree_factory_payments p WHERE p.purpose='tree-sale' GROUP BY p.state,p.mode,p.finalized_at IS NOT NULL"]]){
+  const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
+  console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
+ }
+}
