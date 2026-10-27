@@ -184,6 +184,7 @@ function placePageBanner(){
 function renderPage(){
  document.querySelector('.sale-actions')?.remove();stopFactoryScene();stopFactoryScene=()=>{};shell.classList.toggle('concept-factory',active==='factory');
  if(!snapshot)return;tabs.querySelectorAll('button').forEach(b=>b.disabled=busy);
+ (active==='tree'?$('.home'):viewport).append(tabSign);
  tabSign.hidden=false;tabSign.textContent=({tree:'트리 꾸미기',factory:'장식 공장',inventory:'보관함',collection:'장식 도감'})[active];tabSign.setAttribute('aria-label',tabSign.textContent);
  if(active==='tree'){placePageBanner();return;}
  const titles={factory:'장식 공장',inventory:'보관함',collection:'장식 도감'};
