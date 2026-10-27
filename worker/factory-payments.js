@@ -23,17 +23,33 @@ const read = (env,user,id) => env.DB.prepare('SELECT * FROM tree_factory_payment
 async function finalize(env,user,payment) {
   if (!payment || !['succeeded','failed'].includes(payment.state)) return;
   if (payment.purpose === 'tree-sale') {
-    // A confirmed test payout applies the same tree sale state without paying real points.
-    if (payment.state !== 'succeeded') return;
-    const now = Date.now(),token=crypto.randomUUID();
-    await env.DB.batch([
-      env.DB.prepare("UPDATE tree_factory_payments SET finalized_at=?,finalization_token=? WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='succeeded' AND finalized_at IS NULL AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1)=30")
-        .bind(now,token,payment.id,user.id,user.id),
-      env.DB.prepare('UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND sold_at IS NULL AND placed=1 AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND finalization_token=?)')
-        .bind(now,user.id,payment.id,user.id,token),
-      env.DB.prepare('UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND finalization_token=?)')
+    if (payment.state === 'failed') {
+      // Keep the ornaments on the tree when the payout definitively fails.
+      await env.DB.prepare("UPDATE tree_factory_items SET tree_sale_payment_id=NULL WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL")
+        .bind(user.id,payment.id).run();
+      return;
+    }
+    if (payment.finalized_at !== null && payment.finalized_at !== undefined) return;
+    // Older unsettled sales did not tag their ornaments at reservation time.
+    // Tag only the 30 currently placed ornaments when nothing is already reserved.
+    const reserved=await env.DB.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL")
+      .bind(user.id,payment.id).first();
+    if (reserved.n === 0) {
+      await env.DB.prepare("UPDATE tree_factory_items SET tree_sale_payment_id=? WHERE user_id=? AND sold_at IS NULL AND placed=1 AND tree_sale_payment_id IS NULL AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1)=30")
+        .bind(payment.id,user.id,user.id).run();
+    }
+    const now=Date.now(),token=crypto.randomUUID();
+    const results=await env.DB.batch([
+      env.DB.prepare("UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL)=30 AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='succeeded' AND finalized_at IS NULL)")
+        .bind(now,user.id,payment.id,user.id,payment.id,payment.id,user.id),
+      env.DB.prepare("UPDATE tree_factory_payments SET finalized_at=?,finalization_token=? WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='succeeded' AND finalized_at IS NULL AND (SELECT count(*) FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=? AND sold_at=?)=30")
+        .bind(now,token,payment.id,user.id,user.id,payment.id,now),
+      env.DB.prepare("UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND finalization_token=?)")
         .bind(user.id,payment.id,user.id,token),
     ]);
+    if (results[0]?.meta?.changes !== 30 || results[1]?.meta?.changes !== 1) {
+      console.warn('[tree.sale.finalize]',{event:'ornament_consume_pending',consumed:results[0]?.meta?.changes,finalized:results[1]?.meta?.changes});
+    }
     return;
   }
   // Wallet debit was reserved atomically. Test success releases it; live success consumes it.
