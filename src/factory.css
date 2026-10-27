@@ -117,7 +117,7 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .factory-viewport{width:min(100%,540px);margin:0 auto;overflow:hidden;display:flow-root;container-type:inline-size}
 .factory-art-viewport{overflow:hidden;display:flow-root;container-type:inline-size}
 /* Crop the baked-in old sign without compositing a separate background. */
-.factory-art-viewport>.concept-factory{margin-top:-16.5cqw}
+.factory-art-viewport>.concept-factory{margin-top:-11.75cqw}
 .home .tree-status{position:absolute;top:2.5%;left:16%;width:68%;text-align:center;z-index:5}
 
 /* Each sign hangs over its own tab's existing background; never crop or replace scenery. */
@@ -127,8 +127,8 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .home .tree-status{top:12%}
 body[data-page=inventory] .factory-shell,body[data-page=collection] .factory-shell{padding-top:96px}
 /* Factory sign must clear the quota artwork without shifting/cropping/repainting the background. */
-body[data-page=factory] .tab-sign{top:12px;padding:12px 4px;font-size:clamp(22px,6vw,32px);line-height:1.15}
+body[data-page=factory] .tab-sign{top:0;padding:12px 4px;font-size:clamp(22px,6vw,32px);line-height:1.15}
 
 
 /* Keep the live production count below the standard-size factory sign. */
-body[data-page=factory] .concept-factory .production-counter{top:23.2%}
+body[data-page=factory] .concept-factory .production-counter{top:19.1%}
