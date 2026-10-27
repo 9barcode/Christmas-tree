@@ -161,7 +161,9 @@ async function sellTree(env,user,body){
  if(typeof body.adRequestId!=='string')fail('invalid_request');
  const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
  if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
- const mode=String(env.TOSS_PROMOTION_MODE||'live'),raw=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
+ const raw=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
+ // A TEST_ promotion code always uses the provider test protocol, even when the shared exchange mode is live.
+ const mode=raw.startsWith('TEST_')?'test':String(env.TOSS_PROMOTION_MODE||'live');
  if(!['live','test'].includes(mode)||!raw||!env.TOSS_MTLS||(mode==='live'&&raw.startsWith('TEST_')))fail('tree_sale_not_configured');
  const count=await q(env,'SELECT count(*) AS n FROM tree_factory_collection WHERE user_id=?',user.id).first();if(count.n!==30)fail('collection_incomplete');
  const date=kstDate();

@@ -42,7 +42,7 @@ export default {
       const treeSaleDailyLimit = ready ? 5 : null;
       const promotionMode=String(env.TOSS_PROMOTION_MODE||'live');
       const promotionCode=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
-      const treeSalePromotionStatus=!env.TOSS_MTLS?'mtls_missing':!promotionCode?'code_missing':!['live','test'].includes(promotionMode)?'invalid_mode':promotionMode==='live'&&promotionCode.startsWith('TEST_')?'test_code_in_live_mode':'ready';
+      const treeSalePromotionStatus=!env.TOSS_MTLS?'mtls_missing':!promotionCode?'code_missing':!['live','test'].includes(promotionMode)?'invalid_mode':promotionCode.startsWith('TEST_')?'ready_test':'ready';
       return Response.json({service: 'treemoa', database: ready ? 'ready' : 'migration_required', treeSaleDailyLimit,treeSalePromotionStatus},
         {status: ready ? 200 : 503, headers: {'Cache-Control': 'no-store'}});
     } catch (error) {

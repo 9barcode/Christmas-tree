@@ -141,3 +141,19 @@ test('tree sale pays 50P up to five times per KST day, blocks pending/replays an
  assert.equal((await send('state')).balance,0);
  }finally{sql.close();}
 });
+
+test('TEST_ tree sale code uses test protocol with shared live mode and consumes ornaments after success',async()=>{
+ const {sql,env,send,ad}=await setup();try{
+ env.TOSS_PROMOTION_MODE='live';env.TOSS_PROMOTION_CODE_TREE_SALE='TEST_TREE';env.TOSS_MTLS={};
+ for(const a of catalog){
+ sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
+ sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,source,created_at) VALUES(?,?,?,1,1,?,?)').run(a.id,'user',a.id,'seed:'+a.id,Date.now());
+ }
+ const gate=await ad('tree-sale');const result=await send('claim',{adRequestId:gate.requestId});
+ assert.equal(result.status,200,JSON.stringify(result));
+ const p=sql.prepare("SELECT * FROM tree_factory_payments WHERE purpose='tree-sale'").get();
+ assert.equal(p.mode,'test');assert.equal(p.promotion_code,'TEST_TREE');
+ sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE id=?").run(p.id);
+ const done=await send('recover',{});assert.equal(done.items.length,0);assert.equal(done.collection.length,30);
+ }finally{sql.close();}
+});
