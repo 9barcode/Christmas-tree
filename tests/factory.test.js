@@ -13,7 +13,7 @@ async function setup(){
  const DB={prepare(query){let values=[];return {bind(...v){values=v;return this},async first(){return sql.prepare(query).get(...values)??null},async all(){return {results:sql.prepare(query).all(...values)}},async run(){const result=sql.prepare(query).run(...values);return {meta:{changes:Number(result.changes)}}}}},async batch(statements){sql.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}}};
  const env={DB,REWARDED_AD_GROUP_ID:'reward',INTER_AD_GROUP_ID:'inter',TREE_FACTORY_CATALOG:JSON.stringify(catalog.map(a=>({id:a.id,value:2,weight:1})))};
  async function send(path,body,auth=true){const r=await handleFactory(new Request('https://test/api/v3/'+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(auth?{Authorization:'Bearer '+token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})}),env);return {status:r.status,...await r.json()};}
- async function ad(purpose='produce',details={}){const r=await send('ads/reserve',{purpose,...details});assert.equal(r.status,200,JSON.stringify(r));const interstitial=['produce','sell','tree-sale'].includes(purpose),proof={requestId:r.requestId,adGroupId:r.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded:!interstitial,displayed:true,dismissed:true};return {requestId:r.requestId,proof,result:await send('ads/complete',proof)};}
+ async function ad(purpose='produce',details={}){const r=await send('ads/reserve',{purpose,...details});assert.equal(r.status,200,JSON.stringify(r));const interstitial=['produce','sell'].includes(purpose),proof={requestId:r.requestId,adGroupId:r.adGroupId,eventType:interstitial?'dismissed':'userEarnedReward',rewarded:!interstitial,displayed:true,dismissed:true};return {requestId:r.requestId,proof,result:await send('ads/complete',proof)};}
  return {sql,env,send,ad};
 }
 test('production commits once; daily ten, one overtime, max twenty, KST rollover',async()=>{
@@ -109,7 +109,7 @@ test('tree sale pays 50P up to five times per KST day, blocks pending/replays an
  for(const a of catalog)sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
  async function completeSale(){
   const reservation=await send('ads/reserve',{purpose:'tree-sale'});assert.equal(reservation.status,200,JSON.stringify(reservation));
-  const gate=await send('ads/complete',{requestId:reservation.requestId,adGroupId:'inter',eventType:'dismissed',rewarded:false,displayed:true,dismissed:true});assert.equal(gate.status,200);
+  const gate=await send('ads/complete',{requestId:reservation.requestId,adGroupId:'reward',eventType:'userEarnedReward',rewarded:true,displayed:true,dismissed:true});assert.equal(gate.status,200);
   return send('claim',{adRequestId:reservation.requestId});
  }
  function addPlacedTree(prefix){for(const a of catalog)sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,x,y,source,created_at) VALUES(?,?,?,1,1,50,50,?,?)').run(prefix+a.id,'user',a.id,'seed:'+prefix+a.id,Date.now());}
@@ -155,5 +155,31 @@ test('TEST_ tree sale code uses test protocol with shared live mode and consumes
  assert.equal(p.mode,'test');assert.equal(p.promotion_code,'TEST_TREE');
  sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE id=?").run(p.id);
  const done=await send('recover',{});assert.equal(done.items.length,0);assert.equal(done.collection.length,30);
+ }finally{sql.close();}
+});
+
+
+test('tree sale rejects partial watch, accepts earned reward and replays only the original payment',async()=>{
+ const {sql,env,send}=await setup();try{
+ env.TOSS_PROMOTION_CODE_TREE_SALE='TEST_TREE';env.TOSS_MTLS={};
+ for(const a of catalog){
+ sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
+ sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,source,created_at) VALUES(?,?,?,1,1,?,?)').run(a.id,'user',a.id,'seed:'+a.id,Date.now());
+ }
+ const gate=await send('ads/reserve',{purpose:'tree-sale'});assert.equal(gate.adGroupId,'reward');
+ const partial=await send('ads/complete',{requestId:gate.requestId,adGroupId:'reward',eventType:'dismissed',rewarded:false,displayed:true,dismissed:true});
+ assert.equal(partial.error,'ad_not_completed');
+ assert.equal((await send('claim',{adRequestId:gate.requestId})).error,'ad_not_completed');
+ assert.equal(sql.prepare('SELECT count(*) n FROM tree_factory_payments').get().n,0);
+ assert.equal((await send('state')).items.filter(i=>i.placed).length,30);
+ const earned=await send('ads/complete',{requestId:gate.requestId,adGroupId:'reward',eventType:'userEarnedReward',rewarded:true,displayed:true,dismissed:false});
+ assert.equal(earned.status,200);
+ assert.equal((await send('claim',{adRequestId:gate.requestId})).status,200);
+ assert.equal((await send('claim',{adRequestId:gate.requestId})).status,200);
+ assert.equal(sql.prepare('SELECT count(*) n FROM tree_factory_payments').get().n,1);
+ sql.prepare("UPDATE tree_factory_payments SET state='succeeded'").run();
+ const done=await send('claim',{adRequestId:gate.requestId});assert.equal(done.items.length,0);assert.equal(done.collection.length,30);
+ assert.equal((await send('claim',{adRequestId:gate.requestId})).items.length,0);
+ assert.equal(sql.prepare('SELECT count(*) n FROM tree_factory_payments').get().n,1);
  }finally{sql.close();}
 });

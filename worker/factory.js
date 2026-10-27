@@ -42,7 +42,7 @@ async function view(env,user){
  const treeSalePayment=await q(env,"SELECT state,finalized_at FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND (state IN ('creating','ready','submitted','pending') OR (state='succeeded' AND finalized_at IS NULL)) ORDER BY created_at DESC LIMIT 1",user.id).first();
  const treeSold=treeSaleCount>=5;
  const treeSalePending=!!treeSalePayment;
- return {version:3,date,used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold,treeSalePending,treeSaleCount,treeSaleDailyLimit:5,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,treeSaleReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_TREE_SALE&&!!publicAdConfig(env).interstitialAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
+ return {version:3,date,used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold,treeSalePending,treeSaleCount,treeSaleDailyLimit:5,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,treeSaleReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_TREE_SALE&&!!publicAdConfig(env).rewardedAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 function saleIds(body){
  const ids=body.itemIds===undefined?[body.itemId]:body.itemIds;
@@ -66,7 +66,7 @@ async function unreconciledTreeSale(env,user){
 }
 async function reserve(env,user,body){
  if(['sell','tree-sale','exchange'].includes(body.purpose)){
-  const configuredAd=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];if(!configuredAd)fail('ad_not_configured');const ad=configuredAd;
+  const configuredAd=publicAdConfig(env)[['exchange','tree-sale'].includes(body.purpose)?'rewardedAdGroupId':'interstitialAdGroupId'];if(!configuredAd)fail('ad_not_configured');const ad=configuredAd;
   let itemId=null;
   if(body.purpose==='sell'){
    const ids=saleIds(body);await saleItems(env,user,ids);itemId=saleKey(ids);
@@ -102,8 +102,8 @@ async function finish(env,user,body){
  if(adGate){
   if(['completed','consumed'].includes(adGate.state))return {requestId:adGate.id,purpose:adGate.purpose};
   if(adGate.state!=='reserved'||adGate.date!==kstDate()||adGate.expires_at<=Date.now())fail('request_expired');
-  const valid=adGate.purpose==='exchange'?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
-  if((body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||body.dismissed!==true))fail('ad_not_completed');
+  const valid=['exchange','tree-sale'].includes(adGate.purpose)?body.eventType==='userEarnedReward'&&body.rewarded===true:body.eventType==='dismissed'&&body.rewarded!==true;
+  if((body.adGroupId!==adGate.ad_group_id||!valid||body.displayed!==true||(adGate.purpose!=='tree-sale'&&body.dismissed!==true)))fail('ad_not_completed');
   const now=Date.now();const result=await q(env,"UPDATE tree_factory_ad_gates SET state='completed',completed_at=? WHERE id=? AND user_id=? AND state='reserved' AND expires_at>?",now,adGate.id,user.id,now).run();
   if(result.meta.changes!==1)fail('request_expired');
   return {requestId:adGate.id,purpose:adGate.purpose};
@@ -157,10 +157,12 @@ async function place(env,user,body){
  const results=await env.DB.batch(ops);if(results[0].meta.changes!==1)fail('positions_conflict');
 }
 async function sellTree(env,user,body){
- if(await unreconciledTreeSale(env,user))fail('tree_sale_reconciliation_required');
  if(typeof body.adRequestId!=='string')fail('invalid_request');
+ const existing=await q(env,"SELECT id FROM tree_factory_payments WHERE id=? AND user_id=? AND purpose='tree-sale'",user.id+':tree-sale:'+body.adRequestId,user.id).first();
+ if(existing){await advanceFactoryPayment(env,user,existing.id);return;}
+ if(await unreconciledTreeSale(env,user))fail('tree_sale_reconciliation_required');
  const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
- if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
+ if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.ad_group_id!==publicAdConfig(env).rewardedAdGroupId||gate.date!==kstDate())fail('ad_not_completed');
  const raw=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
  // A TEST_ promotion code always uses the provider test protocol, even when the shared exchange mode is live.
  const mode=raw.startsWith('TEST_')?'test':String(env.TOSS_PROMOTION_MODE||'live');
@@ -197,7 +199,7 @@ async function exchange(env,user,body){
  q(env,`UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=?)`,body.adRequestId,user.id,id,user.id)]);
  const saved=await q(env,'SELECT id FROM tree_factory_payments WHERE id=? AND user_id=?',id,user.id).first();if(saved)await advanceFactoryPayment(env,user,saved.id);
 }
-export async function handleFactory(request,env){
+export async function handleFactory(request,env,context){
  const path=new URL(request.url).pathname;if(!path.startsWith('/api/v3/'))return null;
  const cors=headers(request,env);if(!cors)return Response.json({error:'origin_not_allowed'},{status:403});
  const reply=(data,status=200)=>Response.json(data,{status,headers:{...cors,'Cache-Control':'no-store'}});
@@ -213,7 +215,9 @@ export async function handleFactory(request,env){
  if(route==='sell')await sell(env,user,body);
  if(route==='claim'){
  console.info('[tree.sale]',{event:'claim_start'});
- await sellTree(env,user,body);
+ const sale=sellTree(env,user,body);
+ context?.waitUntil(sale.catch(()=>{}));
+ await sale;
  console.info('[tree.sale]',{event:'claim_processed'});
  }
  if(route==='layout')await place(env,user,body);
@@ -225,3 +229,4 @@ export async function handleFactory(request,env){
  return reply(await view(env,user));
  }catch(error){const known=['tree_sale_reconciliation_required','item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_sale_daily_limit','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','tree_sale_not_configured','payment_in_progress'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
+

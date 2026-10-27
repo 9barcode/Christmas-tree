@@ -6,18 +6,40 @@ async function journalKey(){return 'tree.factory.pending.'+(await ensureMissionS
 export async function recoverFactoryAd(){
  const key=await journalKey();let saved;try{saved=JSON.parse(localStorage.getItem(key));}catch{localStorage.removeItem(key);return null;}
  if(!saved)return null;
- if(!saved.proof){if(saved.expiresAt>Date.now())throw Error('광고가 진행 중이에요. 잠시 후 다시 확인해 주세요.');await factoryCall('ads/cancel',{requestId:saved.requestId});localStorage.removeItem(key);return null;}
- try{const result=await factoryCall('ads/complete',saved.proof);localStorage.removeItem(key);return result;}catch(e){if(['request_expired','request_not_found','ad_not_completed'].includes(e.code))localStorage.removeItem(key);throw e;}
+ if(!saved.proof){await factoryCall('ads/cancel',{requestId:saved.requestId});localStorage.removeItem(key);return null;}
+ try{
+  const result=await factoryCall('ads/complete',saved.proof);
+  if(saved.purpose==='tree-sale'){
+   if(saved.proof.eventType!=='userEarnedReward'||saved.proof.rewarded!==true)throw Object.assign(Error('광고 시청을 완료해 주세요.'),{code:'ad_not_completed'});
+   await factoryCall('claim',{adRequestId:saved.requestId});
+  }
+  localStorage.removeItem(key);return result;
+ }catch(e){if(['request_expired','request_not_found','ad_not_completed'].includes(e.code))localStorage.removeItem(key);throw e;}
 }
 export async function factoryAd(purpose,details={},options={}){
  await recoverFactoryAd();const r=await factoryCall('ads/reserve',{purpose,...details}),key=await journalKey();let proof;
  try{
  localStorage.setItem(key,JSON.stringify(r));
  const {showNativeRewarded,showNativeInterstitial}=await import('./native-promotions.js');
- const showAd=['sell','tree-sale','produce'].includes(purpose)?showNativeInterstitial:showNativeRewarded;
- proof={requestId:r.requestId,...await showAd({adGroupId:r.adGroupId})};
+ const showAd=['sell','produce'].includes(purpose)?showNativeInterstitial:showNativeRewarded;
+ proof={requestId:r.requestId,...await showAd({adGroupId:r.adGroupId,
+  ...(purpose==='tree-sale'?{onEarned:earned=>{
+   proof={requestId:r.requestId,...earned};
+   localStorage.setItem(key,JSON.stringify({...r,proof}));
+  }}:{})
+ })};
  localStorage.setItem(key,JSON.stringify({...r,proof}));
  options.onAdFinished?.();
- const result=await factoryCall('ads/complete',proof);localStorage.removeItem(key);return result;
+ const result=await factoryCall('ads/complete',proof);
+ if(purpose!=='tree-sale')localStorage.removeItem(key);return result;
  }catch(e){if(!proof){try{await factoryCall('ads/cancel',{requestId:r.requestId});localStorage.removeItem(key);}catch{/* Recover by expiration. */}}throw e;}
+}
+
+
+// Keep the completed proof until the server acknowledges the sale transaction.
+export async function claimFactoryTree(adRequestId){
+ const result=await factoryCall('claim',{adRequestId});
+ const key=await journalKey();let saved;try{saved=JSON.parse(localStorage.getItem(key));}catch{}
+ if(saved?.requestId===adRequestId)localStorage.removeItem(key);
+ return result;
 }

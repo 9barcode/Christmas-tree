@@ -27,7 +27,7 @@ export function preloadNativeAd(adGroupId){
  });
  return entry.promise;
 }
-async function showAd(adGroupId,rewarded){
+async function showAd(adGroupId,rewarded,onEarned){
  if(active)throw Error('광고가 이미 진행 중이에요.');
  active=true;
  try{
@@ -47,7 +47,10 @@ async function showAd(adGroupId,rewarded){
     stopShow=showFullScreenAd({options:{adGroupId},onError:()=>finish(Error('광고를 표시하지 못했어요.')),onEvent:event=>{
      if(ended)return;
      if(['show','impression'].includes(event.type)){displayed=true;clearTimeout(timer);timer=setTimeout(()=>finish(Error('광고 종료를 확인하지 못했어요.')),5*60000);}
-     else if(event.type==='userEarnedReward')earned=true;
+     else if(event.type==='userEarnedReward'){
+      earned=true;
+      if(rewarded)try{onEarned?.({adGroupId,displayed:true,dismissed:false,eventType:'userEarnedReward',rewarded:true});}catch(error){finish(error);}
+     }
      else if(event.type==='dismissed')finish();
      else if(event.type==='failedToShow')finish(Error('광고를 표시하지 못했어요.'));
     }});
@@ -59,5 +62,6 @@ async function showAd(adGroupId,rewarded){
   preloadNativeAd(adGroupId).catch(()=>{});
  }
 }
-export const showNativeRewarded=({adGroupId})=>showAd(adGroupId,true);
+export const showNativeRewarded=({adGroupId,onEarned})=>showAd(adGroupId,true,onEarned);
 export const showNativeInterstitial=({adGroupId})=>showAd(adGroupId,false);
+

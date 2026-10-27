@@ -2,7 +2,7 @@ import assetBounds from './asset-bounds.js';
 import {imageCache} from './image-cache.js';
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
-import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
+import {factoryCall,factoryAd,recoverFactoryAd,claimFactoryTree} from './factory-client.js';
 import {startHomeBanner} from './banner.js';
 import {catalog,byId,kstDate,productionBlockReason,defaultFactoryCatalog,drawCatalog} from './factory-model.js';
 import {defaultPosition,clampPosition,OBJECT_SIZES,floorDepth,sanitizePositions} from './placement.js';
@@ -138,7 +138,7 @@ function openTreeSaleConfirmation(){
   let adFinished=false;
   try{
    const ad=await factoryAd('tree-sale',{}, {onAdFinished:()=>{adFinished=true;showTreeSaleResult('pending');}});
-   snapshot=await factoryCall('claim',{adRequestId:ad.requestId});
+   snapshot=await claimFactoryTree(ad.requestId);
    await renderTree();renderPage();showTreeSaleResultFromSnapshot();
   }catch(error){
    if(!adFinished)throw error;
@@ -328,13 +328,19 @@ function showShare(){
 }
 
 const motion=pageEffects(async()=>{const fire=await startCozyFire($('.fire'),$('.room'));const snow=startCozySnow($('.snow'));return()=>{fire();snow();};},{onError:console.error});
-await load();await render();await motion.start();setPage('tree');startHomeBanner();
+await load();
+if(!preview){
+ let pendingAd=false;try{pendingAd=Object.keys(localStorage).some(k=>k.startsWith('tree.factory.pending.'));}catch{}
+ if(pendingAd||snapshot.treeSalePending)try{await recoverFactoryAd();snapshot=await factoryCall('recover',{});}catch(error){console.warn('[tree.sale.recovery]',{code:error.code||'retry_required'});}
+}
+await render();await motion.start();setPage('tree');startHomeBanner();
 let lastDate=snapshot.date,lastRefreshAt=Date.now();
 async function reconnect(){if(preview||busy||document.hidden||(kstDate()===lastDate&&Date.now()-lastRefreshAt<10000))return;lastRefreshAt=Date.now();await run(async()=>{await recoverFactoryAd();snapshot=await factoryCall('recover',{});await render();lastDate=snapshot.date;});}
 window.addEventListener('tree:home-ready',()=>{
  let pendingAd=false;try{pendingAd=Object.keys(localStorage).some(k=>k.startsWith('tree.factory.pending.'));}catch{/* Focus refresh can retry. */}
- if(pendingAd||snapshot.payments.some(p=>!['succeeded','failed'].includes(p.state))){lastRefreshAt=0;reconnect();}
+ if(pendingAd||snapshot.treeSalePending||snapshot.payments.some(p=>!['succeeded','failed'].includes(p.state))){lastRefreshAt=0;reconnect();}
 });window.addEventListener('focus',reconnect);document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('factory-paused',document.hidden);if(!document.hidden)reconnect();});
 setInterval(()=>{if(!preview&&kstDate()!==lastDate)reconnect();},60000);
 // Let a short result timer settle on pagehide; rewards have already been committed.
+
 

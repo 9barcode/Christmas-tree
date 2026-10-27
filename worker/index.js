@@ -15,7 +15,7 @@ export default {
   async fetch(request, env, context) {
     const analyticsResponse = await handleAnalyticsEvents(request, env);
     if (analyticsResponse) return analyticsResponse;
-    const factoryResponse = await handleFactory(request, env);
+    const factoryResponse = await handleFactory(request, env, context);
     if (factoryResponse) return factoryResponse;
     const bmResponse = await handleBM(request, env);
     if (bmResponse) return bmResponse;
@@ -52,3 +52,4 @@ export default {
     }
   },
 };
+
