@@ -45,7 +45,7 @@ function showGuide(){
  c.append(
   guideCard('assets/factory/santa.webp','하루 10개씩 만들어요','장식을 모아 트리를 꾸며요.'),
   guideCard('assets/thumbnails/gift-burgundy.webp','하루 10개 더 만들어요','추가 장식도 모을 수 있어요.'),
-  guideCard('assets/trees/tree-green.png','원하는 곳에 꾸며요','장식과 선물은 드래그해 옮겨요.'),
+  guideCard('assets/trees/tree-green.webp','원하는 곳에 꾸며요','장식과 선물은 드래그해 옮겨요.'),
   guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50P','완성한 트리는 하루 5회 판매해요.'),
   guideCard('assets/thumbnails/bell-brass.webp','벨을 포인트로 바꿔요','1벨은 토스포인트 1P예요.')
  );
@@ -69,7 +69,7 @@ async function renderTree(){
  const scene=JSON.stringify(snapshot.items.filter(i=>i.placed).map(i=>[i.id,i.asset_id,i.x,i.y]));
  if(scene===lastTreeScene){syncTreeSaleButton();return;}
  preparedTreePhoto=null;
- const tree=await assetNode('assets/trees/tree-green.png','tree'),pot=await assetNode('assets/planters/planter-wood.png','pot'),back=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
+ const tree=await assetNode('assets/trees/tree-green.webp','tree'),pot=await assetNode('assets/planters/planter-wood.webp','pot'),back=await assetNode('assets/planters/planter-wood.webp','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
  snapshot.pot=defaultPosition('pot');
  for(const target of [pot,back])Object.assign(target.style,{width:OBJECT_SIZES.pot.w+'%',height:OBJECT_SIZES.pot.h+'%',left:snapshot.pot.x+'%',top:snapshot.pot.y+'%',transform:'translate(-50%,-50%)',zIndex:String(target===back?0:floorDepth('pot',snapshot.pot.y))});
  const ornaments=[],floor=[];let oi=0,fi=0;
@@ -165,7 +165,7 @@ function renderPage(){
 function renderFactory(){
  const stopped=snapshot.used>=snapshot.limit,scene=node('div','workshop'+(stopped?' stopped':''));
  scene.setAttribute('aria-label','시안 원본의 산타 장식 공장');
- const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.png';painting.alt='';painting.draggable=false;
+ const painting=node('img','factory-concept-art');painting.src='assets/factory/concept-original.webp';painting.alt='';painting.draggable=false;
  scene.append(painting,node('div','workshop-light'));shell.append(scene);
  stopFactoryScene=startFactoryScene(scene);
  const counter=node('section','production-counter');counter.setAttribute('aria-label','오늘의 생산량');counter.append(node('span','production-counter-label','오늘의 생산량'),node('strong','',`${snapshot.used} / ${snapshot.limit}`));

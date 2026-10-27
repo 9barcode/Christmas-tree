@@ -1,6 +1,6 @@
 # Factory production light effect
 
-The current factory displays `assets/factory/concept-original.png` unchanged.
+The current factory displays `assets/factory/concept-original.webp` unchanged.
 Santas, conveyor, rollers, gifts and the mystery box remain still. The transient
 bouncing/spinning produced-ornament overlay has also been removed; the result
 dialog still opens after the existing production delay.

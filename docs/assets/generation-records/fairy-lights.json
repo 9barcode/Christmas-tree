@@ -1,6 +1,6 @@
 {
   "id": "fairy-lights",
-  "path": "assets/decorations/fairy-lights.png",
+  "path": "assets/decorations/fairy-lights.webp",
   "prompt": "Use case: stylized-concept. Create ONE standalone transparent tree FAIRY LIGHT STRING overlay fitted to the attached approved tree silhouette. Keep same square canvas and exact foliage silhouette proportions as reference BUT REMOVE the tree and planter entirely. Show ONLY one continuous delicate dark olive wire looping back and forth in 5 gently sagging widening arcs, narrow at top around y18%, widening to x12%-88% at y73%; final lowest curve above y78%, do NOT cross pot. About 35 TINY warm honey-yellow bulbs distributed along the string, subtle ivory centers, warm amber edges. It should overlay foliage naturally like loosely spiraling lights, not a horizontal Christmas border, not a tangled pile. Entire strand counts as ONE attendance decoration. Small bulbs and thin wire must NOT dominate future topper star or other ornaments. Small layered brushstroke illustration matching reference, no smooth shiny plastic. No tree, no pot, no ornaments, no star, no text, no ground, no broad glow or opaque background. True transparent alpha all around and between all wire loops, clean transparency. Warm light ON bulbs only, faint minimal local glow. Preserve original canvas framing to fit the approved tree when scaled.",
   "kind": "lights",
   "originalNumber": null

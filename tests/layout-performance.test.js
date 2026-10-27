@@ -25,7 +25,7 @@ test('failed optimistic placement restores the previous layout',async()=>{
  assert.equal(f.state().items[0].placed,0);assert.equal(f.state().revision,7);
 });
 test('packaged tree artwork uses cached bounds rather than startup pixel scanning',()=>{
- for(const path of ['assets/trees/tree-green.png','assets/planters/planter-wood.png',...catalog.map(a=>a.path)]){
+ for(const path of ['assets/trees/tree-green.webp','assets/planters/planter-wood.webp',...catalog.map(a=>a.path)]){
   assert.ok(bounds[path]?.w>0);assert.ok(bounds[path]?.h>0);
   assert.equal(bounds[path].box.split(' ').length,4);
  }

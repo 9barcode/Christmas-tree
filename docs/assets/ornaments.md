@@ -6,37 +6,37 @@
 
 | 원본 번호 | 에셋 | 경로 |
 |---|---|---|
-| 1 | 웃는 빨강 구슬 | `assets/ornaments/bauble-red-smile.png` |
-| 2 | 초록 눈송이 구슬 | `assets/ornaments/bauble-green-snowflake.png` |
-| 3 | 웃는 아이보리 구슬 | `assets/ornaments/bauble-ivory-smile.png` |
-| 4 | 금색 줄무늬 구슬 | `assets/ornaments/bauble-gold-stripe.png` |
-| 5 | 버건디 다이아 구슬 | `assets/ornaments/bauble-burgundy-diamond.png` |
-| 6 | 빨간 리본 | `assets/ornaments/bow-red.png` |
-| 8 | 황동 종 | `assets/ornaments/bell-brass.png` |
-| 9 | 사탕 지팡이 | `assets/ornaments/candy-cane.png` |
-| 10 | 진저브레드 맨 | `assets/ornaments/gingerbread-man.png` |
-| 11 | 진저브레드 집 | `assets/ornaments/gingerbread-house.png` |
-| 12 | 빨간 양말 | `assets/ornaments/stocking-red.png` |
-| 13 | 초록 장갑 한 쌍 | `assets/ornaments/mittens-green.png` |
-| 14 | 목마 | `assets/ornaments/rocking-horse.png` |
-| 15 | 작은 북 | `assets/ornaments/drum-red.png` |
-| 16 | 아이보리 눈송이 | `assets/ornaments/snowflake-ivory.png` |
-| 17 | 눈사람 | `assets/ornaments/snowman.png` |
-| 18 | 루돌프 | `assets/ornaments/reindeer.png` |
-| 19 | 산타 모자 | `assets/ornaments/santa-hat.png` |
-| 20 | 솔방울 | `assets/ornaments/pinecone.png` |
-| 21 | 눈 덮인 작은 집 | `assets/ornaments/cottage-snow.png` |
-| 22 | 아이보리 비둘기 | `assets/ornaments/dove-ivory.png` |
-| 23 | 버건디 하트 | `assets/ornaments/heart-burgundy.png` |
+| 1 | 웃는 빨강 구슬 | `assets/ornaments/bauble-red-smile.webp` |
+| 2 | 초록 눈송이 구슬 | `assets/ornaments/bauble-green-snowflake.webp` |
+| 3 | 웃는 아이보리 구슬 | `assets/ornaments/bauble-ivory-smile.webp` |
+| 4 | 금색 줄무늬 구슬 | `assets/ornaments/bauble-gold-stripe.webp` |
+| 5 | 버건디 다이아 구슬 | `assets/ornaments/bauble-burgundy-diamond.webp` |
+| 6 | 빨간 리본 | `assets/ornaments/bow-red.webp` |
+| 8 | 황동 종 | `assets/ornaments/bell-brass.webp` |
+| 9 | 사탕 지팡이 | `assets/ornaments/candy-cane.webp` |
+| 10 | 진저브레드 맨 | `assets/ornaments/gingerbread-man.webp` |
+| 11 | 진저브레드 집 | `assets/ornaments/gingerbread-house.webp` |
+| 12 | 빨간 양말 | `assets/ornaments/stocking-red.webp` |
+| 13 | 초록 장갑 한 쌍 | `assets/ornaments/mittens-green.webp` |
+| 14 | 목마 | `assets/ornaments/rocking-horse.webp` |
+| 15 | 작은 북 | `assets/ornaments/drum-red.webp` |
+| 16 | 아이보리 눈송이 | `assets/ornaments/snowflake-ivory.webp` |
+| 17 | 눈사람 | `assets/ornaments/snowman.webp` |
+| 18 | 루돌프 | `assets/ornaments/reindeer.webp` |
+| 19 | 산타 모자 | `assets/ornaments/santa-hat.webp` |
+| 20 | 솔방울 | `assets/ornaments/pinecone.webp` |
+| 21 | 눈 덮인 작은 집 | `assets/ornaments/cottage-snow.webp` |
+| 22 | 아이보리 비둘기 | `assets/ornaments/dove-ivory.webp` |
+| 23 | 버건디 하트 | `assets/ornaments/heart-burgundy.webp` |
 
 ## 별도 소품
 
 | 에셋 | 경로 | 출석 수 |
 |---|---|---|
-| 나무 미니카 | `assets/decorations/toy-car.png` | 1 |
-| 곰 인형 | `assets/decorations/teddy-bear.png` | 1 |
-| 따뜻한 전구 줄 전체 | `assets/decorations/fairy-lights.png` | 1 |
-| 금빛 꼭대기 별 | `assets/toppers/star-gold.png` | 마지막 1 |
+| 나무 미니카 | `assets/decorations/toy-car.webp` | 1 |
+| 곰 인형 | `assets/decorations/teddy-bear.webp` | 1 |
+| 따뜻한 전구 줄 전체 | `assets/decorations/fairy-lights.webp` | 1 |
+| 금빛 꼭대기 별 | `assets/toppers/star-gold.webp` | 마지막 1 |
 
 전구 개별 개수나 장갑 한 쌍의 좌우는 별도 출석 개체로 세지 않는다.
 

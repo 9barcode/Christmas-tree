@@ -15,12 +15,12 @@
 
 | 경로 | 내용 |
 |---|---|
-| `assets/trees/tree-green.png` | 클래식 그린 |
-| `assets/trees/tree-white.png` | 스노우 화이트 |
-| `assets/trees/tree-pink.png` | 블러썸 핑크 |
-| `assets/trees/tree-blue.png` | 아이스 블루 |
-| `assets/trees/tree-gold.png` | 샴페인 골드 |
-| `assets/planters/planter-wood.png` | 리본 없는 공통 나무 화분 |
+| `assets/trees/tree-green.webp` | 클래식 그린 |
+| `assets/trees/tree-white.webp` | 스노우 화이트 |
+| `assets/trees/tree-pink.webp` | 블러썸 핑크 |
+| `assets/trees/tree-blue.webp` | 아이스 블루 |
+| `assets/trees/tree-gold.webp` | 샴페인 골드 |
+| `assets/planters/planter-wood.webp` | 리본 없는 공통 나무 화분 |
 
 각 이미지는 투명 PNG다. 생성형 편집으로 색상별 미세 윤곽 차이가 있을 수 있으므로 오너먼트 부착 좌표는 실제 합성 화면에서 검증한다. 최신 수량은 바닥 소품 6개·트리 오너먼트 22개·전구 줄 1개·별 1개다.
 원본 캔버스 내 위치를 보존하도록 생성했으나 화분과 줄기의 결합 위치는 합성 시 확인해야 한다.

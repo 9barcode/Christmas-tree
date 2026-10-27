@@ -1,6 +1,6 @@
 {
   "id": "toy-car",
-  "path": "assets/decorations/toy-car.png",
+  "path": "assets/decorations/toy-car.webp",
   "prompt": "Use case: background-extraction. Extract this EXACT approved burgundy red and ivory wooden toy car, preserving shape, perspective, wheels, natural wood accents and small painted brushstrokes. Remove cream background and ground shadow, clean true transparent alpha immediately outside toy contour, including see-through windows. One full object centered with modest clear margins. NO extra objects, no aura, no backdrop, no text, no redesign.",
   "kind": "floor",
   "originalNumber": null

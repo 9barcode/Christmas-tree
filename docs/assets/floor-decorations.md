@@ -10,13 +10,13 @@
 
 | 파일 | 소품 | 상태 |
 |---|---|---|
-| `assets/planters/planter-wood.png` | 리본 없는 나무 화분 | 기본 제공, 출석 수 제외 |
-| `assets/decorations/gift-burgundy.png` | 버건디 상자·아이보리 리본 | 출석 소품 1개 |
-| `assets/decorations/gift-green-large.png` | 낮고 넓은 초록 상자·빨간 리본 | 출석 소품 1개 |
-| `assets/decorations/gift-cream.png` | 크림 상자·빨간 리본 | 출석 소품 1개 |
-| `assets/decorations/gift-green-small.png` | 작은 초록 상자·크림 리본 | 출석 소품 1개 |
-| `assets/decorations/toy-car.png` | 빨강·아이보리 나무 미니카 | 출석 소품 1개 |
-| `assets/decorations/teddy-bear.png` | 빨간 목도리 곰 인형 | 출석 소품 1개 |
+| `assets/planters/planter-wood.webp` | 리본 없는 나무 화분 | 기본 제공, 출석 수 제외 |
+| `assets/decorations/gift-burgundy.webp` | 버건디 상자·아이보리 리본 | 출석 소품 1개 |
+| `assets/decorations/gift-green-large.webp` | 낮고 넓은 초록 상자·빨간 리본 | 출석 소품 1개 |
+| `assets/decorations/gift-cream.webp` | 크림 상자·빨간 리본 | 출석 소품 1개 |
+| `assets/decorations/gift-green-small.webp` | 작은 초록 상자·크림 리본 | 출석 소품 1개 |
+| `assets/decorations/toy-car.webp` | 빨강·아이보리 나무 미니카 | 출석 소품 1개 |
+| `assets/decorations/teddy-bear.webp` | 빨간 목도리 곰 인형 | 출석 소품 1개 |
 
 선물 상자 하나가 한 번의 출석 꾸미기다. 상자 위 리본·작은 잎은 해당 상자 그림의 일부이고 별도 지급 개체가 아니다.
 모든 PNG는 개별 중심 배치 에셋이며 트리 PNG와 캔버스를 단순 중첩하지 않는다. 고유 표시 크기와 바닥 기준점을 지정해야 한다.

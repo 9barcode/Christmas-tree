@@ -90,7 +90,7 @@ async function render(){
   const t=state.trees[index],b=document.createElement('button'),exchanged=!t&&!!credit(index+1)?.paid_at;
   b.className='slot'+(index===selected?' selected':'')+(!t?(exchanged?' is-exchanged':' is-locked'):'');b.disabled=busy||exchanged;
   b.setAttribute('aria-pressed',String(index===selected));b.setAttribute('aria-label',t?`${index+1}번 트리, 장식 ${t.count}/30`:exchanged?`${index+1}번 트리 · 포인트 교환 완료`:`${index+1}번 트리, 리워드 광고로 추가`);
-  b.innerHTML=t?`<img src="assets/trees/tree-${t.color}.png" alt=""><span>${index+1}</span>`:exchanged?'<span class="lock" aria-hidden="true">✓</span><span>'+String(index+1)+'</span>':'<span class="lock" aria-hidden="true">🔒</span><span>'+String(index+1)+'</span>';
+  b.innerHTML=t?`<img src="assets/trees/tree-${t.color}.webp" alt=""><span>${index+1}</span>`:exchanged?'<span class="lock" aria-hidden="true">✓</span><span>'+String(index+1)+'</span>':'<span class="lock" aria-hidden="true">🔒</span><span>'+String(index+1)+'</span>';
   b.onclick=()=>{
    if(busy||recovering)return;
    if(exchanged)return;
@@ -101,7 +101,7 @@ async function render(){
  if(!tree){$('.progress').textContent='빈 슬롯을 눌러 광고를 보고 새 트리를 만들어요';updateCTA();$('.tree')?.remove();$('.pot')?.remove();$('.pot-back')?.remove();$('.ornaments').replaceChildren();$('.floor').replaceChildren();return;}
  $('.progress').textContent=`${tree.slot}번 트리 · 장식 ${tree.count}/30 · 오늘 ${tree.dailyUsed}/10`;
  updateCTA();
- const [trunk,pot,potBack]=await Promise.all([assetNode(`assets/trees/tree-${tree.color}.png`,'tree'),assetNode('assets/planters/planter-wood.png','pot'),assetNode('assets/planters/planter-wood.png','pot-back')]);
+ const [trunk,pot,potBack]=await Promise.all([assetNode(`assets/trees/tree-${tree.color}.webp`,'tree'),assetNode('assets/planters/planter-wood.webp','pot'),assetNode('assets/planters/planter-wood.webp','pot-back')]);
  pot.style.clipPath=planterClipPath(true);potBack.style.clipPath=planterClipPath(false);
  bindObject(pot,'pot','__pot',tree,tree.positions.__pot??defaultPosition('pot'),potBack);
  const ornaments=[],floor=[];let ornamentIndex=0,floorIndex=0;

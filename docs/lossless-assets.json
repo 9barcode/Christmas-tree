@@ -1,0 +1,418 @@
+{
+  "pillow": "12.3.0",
+  "count": 41,
+  "original_bytes": 63938395,
+  "webp_bytes": 45073380,
+  "assets": [
+    {
+      "source": "assets/backgrounds/cozy-europe-room.png",
+      "target": "assets/backgrounds/cozy-europe-room.webp",
+      "width": 1024,
+      "height": 1536,
+      "original_bytes": 2304170,
+      "webp_bytes": 1716738,
+      "rgba_identical": true,
+      "rgba_sha256": "a74b2d5b13ed3ddbd5d6353644f421cd71a6ddac600be7d610c84803d8dda28c"
+    },
+    {
+      "source": "assets/decorations/fairy-lights.png",
+      "target": "assets/decorations/fairy-lights.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 991818,
+      "webp_bytes": 654616,
+      "rgba_identical": true,
+      "rgba_sha256": "fc20b3dc30561ee871fbf09321f79079df5be0134f5e671eb184e2744790ef22"
+    },
+    {
+      "source": "assets/decorations/gift-burgundy.png",
+      "target": "assets/decorations/gift-burgundy.webp",
+      "width": 1374,
+      "height": 1145,
+      "original_bytes": 1512296,
+      "webp_bytes": 1109856,
+      "rgba_identical": true,
+      "rgba_sha256": "e5046f89df28f8f9407f1b4c6713465127f3895350c8e0c0951bffaf1404b434"
+    },
+    {
+      "source": "assets/decorations/gift-cream.png",
+      "target": "assets/decorations/gift-cream.webp",
+      "width": 1374,
+      "height": 1145,
+      "original_bytes": 1335595,
+      "webp_bytes": 960360,
+      "rgba_identical": true,
+      "rgba_sha256": "a191843538261b579519650b9429ad5bea34d16bc0ff91a94e514754a98d5d59"
+    },
+    {
+      "source": "assets/decorations/gift-green-large.png",
+      "target": "assets/decorations/gift-green-large.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 1818286,
+      "webp_bytes": 1214496,
+      "rgba_identical": true,
+      "rgba_sha256": "1b53646f53db885e3a1d9286b938bc7b148f84cf42fb53c2baf75d509d7921ac"
+    },
+    {
+      "source": "assets/decorations/gift-green-small.png",
+      "target": "assets/decorations/gift-green-small.webp",
+      "width": 1315,
+      "height": 1197,
+      "original_bytes": 1319587,
+      "webp_bytes": 943160,
+      "rgba_identical": true,
+      "rgba_sha256": "0ff4c77f9535f283106bed146a5c39d6ed2ab40689b195e9b1c09494e83fd671"
+    },
+    {
+      "source": "assets/decorations/teddy-bear.png",
+      "target": "assets/decorations/teddy-bear.webp",
+      "width": 1145,
+      "height": 1374,
+      "original_bytes": 1821849,
+      "webp_bytes": 1289374,
+      "rgba_identical": true,
+      "rgba_sha256": "13fc67f4b3a05ed24b89d6852b146e6ee9cd56e3433e8a7fd22efb9278d257c0"
+    },
+    {
+      "source": "assets/decorations/toy-car.png",
+      "target": "assets/decorations/toy-car.webp",
+      "width": 1312,
+      "height": 1199,
+      "original_bytes": 1393434,
+      "webp_bytes": 998538,
+      "rgba_identical": true,
+      "rgba_sha256": "986138756f5c9e5d85615bb7f22d2cdc8955ae4a2b0f9bd7313d908811ffba94"
+    },
+    {
+      "source": "assets/effects/fire-glow.png",
+      "target": "assets/effects/fire-glow.webp",
+      "width": 1774,
+      "height": 887,
+      "original_bytes": 736919,
+      "webp_bytes": 540760,
+      "rgba_identical": true,
+      "rgba_sha256": "51d13c97d5f2adff335cd051200741dbbb7fd2edff1034996d29aed51c6ca6ec"
+    },
+    {
+      "source": "assets/factory/concept-original.png",
+      "target": "assets/factory/concept-original.webp",
+      "width": 512,
+      "height": 1024,
+      "original_bytes": 690552,
+      "webp_bytes": 544980,
+      "rgba_identical": true,
+      "rgba_sha256": "7f9bff0c5df45c4060dd5e67d8025e1262df58d687ca5bd348768efd5fc5d639"
+    },
+    {
+      "source": "assets/loading/cream-background.png",
+      "target": "assets/loading/cream-background.webp",
+      "width": 941,
+      "height": 1672,
+      "original_bytes": 1490642,
+      "webp_bytes": 887814,
+      "rgba_identical": true,
+      "rgba_sha256": "471e76e4a98ae6f87b3d9601e80870f30827b2f32bdeabaad6823f297c3b3d95"
+    },
+    {
+      "source": "assets/loading/santa-rudolph-run.png",
+      "target": "assets/loading/santa-rudolph-run.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 1356294,
+      "webp_bytes": 933512,
+      "rgba_identical": true,
+      "rgba_sha256": "12215db9eb41ad43ac4052b4ec5562f3d6c47a0a2af3119ec978d204ce2f9954"
+    },
+    {
+      "source": "assets/ornaments/bauble-burgundy-diamond.png",
+      "target": "assets/ornaments/bauble-burgundy-diamond.webp",
+      "width": 1327,
+      "height": 1186,
+      "original_bytes": 952094,
+      "webp_bytes": 661168,
+      "rgba_identical": true,
+      "rgba_sha256": "f446a0819cb0f4fc9769aecec68ecc7e7ba2f44e9ef7b57e838a97bfa836915c"
+    },
+    {
+      "source": "assets/ornaments/bauble-gold-stripe.png",
+      "target": "assets/ornaments/bauble-gold-stripe.webp",
+      "width": 1315,
+      "height": 1196,
+      "original_bytes": 1415887,
+      "webp_bytes": 983112,
+      "rgba_identical": true,
+      "rgba_sha256": "4e2ada6444bfb31ad9ca40002639f6a6e52521574e1d514e4f8475af293626af"
+    },
+    {
+      "source": "assets/ornaments/bauble-green-snowflake.png",
+      "target": "assets/ornaments/bauble-green-snowflake.webp",
+      "width": 1309,
+      "height": 1201,
+      "original_bytes": 1508636,
+      "webp_bytes": 1104384,
+      "rgba_identical": true,
+      "rgba_sha256": "a7fa62727b5d776eb6720a7594111dfa9daac8407d5f135d420fc073455a2b0a"
+    },
+    {
+      "source": "assets/ornaments/bauble-ivory-smile.png",
+      "target": "assets/ornaments/bauble-ivory-smile.webp",
+      "width": 1285,
+      "height": 1224,
+      "original_bytes": 1317785,
+      "webp_bytes": 892056,
+      "rgba_identical": true,
+      "rgba_sha256": "9fbc3179cbb74fbba519a5719148b27d002c54c5019621a7a4dc1ee811e43a8b"
+    },
+    {
+      "source": "assets/ornaments/bauble-red-smile.png",
+      "target": "assets/ornaments/bauble-red-smile.webp",
+      "width": 1301,
+      "height": 1209,
+      "original_bytes": 1357641,
+      "webp_bytes": 987156,
+      "rgba_identical": true,
+      "rgba_sha256": "86dd786acf0135b652cc430fa3a91e2aad8c54c55e7c7aaac5c40c1534835c72"
+    },
+    {
+      "source": "assets/ornaments/bell-brass.png",
+      "target": "assets/ornaments/bell-brass.webp",
+      "width": 1358,
+      "height": 1158,
+      "original_bytes": 1576582,
+      "webp_bytes": 1177172,
+      "rgba_identical": true,
+      "rgba_sha256": "eac3f049b3236dd912758f9f95ce25b6fa09d8991184b25feae06c2394b6ea0a"
+    },
+    {
+      "source": "assets/ornaments/bow-red.png",
+      "target": "assets/ornaments/bow-red.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2128958,
+      "webp_bytes": 1410080,
+      "rgba_identical": true,
+      "rgba_sha256": "493c180bc2f1b902b9bb6ca28bb1e6fe6317b3c2fbffe313cd39534ef56a54e8"
+    },
+    {
+      "source": "assets/ornaments/candy-cane.png",
+      "target": "assets/ornaments/candy-cane.webp",
+      "width": 1024,
+      "height": 1536,
+      "original_bytes": 1863909,
+      "webp_bytes": 1203838,
+      "rgba_identical": true,
+      "rgba_sha256": "0f1a570bf276549700deecdc4821bfb12858f3706f61d36aa951d3e851c3156f"
+    },
+    {
+      "source": "assets/ornaments/cottage-snow.png",
+      "target": "assets/ornaments/cottage-snow.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2074379,
+      "webp_bytes": 1424350,
+      "rgba_identical": true,
+      "rgba_sha256": "c360a4558b6db36271016c42bba7a07585fbab445584d76b50d2e030a65670f7"
+    },
+    {
+      "source": "assets/ornaments/dove-ivory.png",
+      "target": "assets/ornaments/dove-ivory.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2029726,
+      "webp_bytes": 1293336,
+      "rgba_identical": true,
+      "rgba_sha256": "14ca280cdce94063b3f96607e21a779ba38ca693e3098d09574ebba103017400"
+    },
+    {
+      "source": "assets/ornaments/drum-red.png",
+      "target": "assets/ornaments/drum-red.webp",
+      "width": 1312,
+      "height": 1199,
+      "original_bytes": 1619895,
+      "webp_bytes": 1216156,
+      "rgba_identical": true,
+      "rgba_sha256": "3c2abbaeb7a1bfb28cca8c24449b8529e604c6b3abf31c444a47c32d6cc03b14"
+    },
+    {
+      "source": "assets/ornaments/gingerbread-house.png",
+      "target": "assets/ornaments/gingerbread-house.webp",
+      "width": 1374,
+      "height": 1145,
+      "original_bytes": 1609709,
+      "webp_bytes": 1184862,
+      "rgba_identical": true,
+      "rgba_sha256": "632b3dd53ec0e304906f93781e0390c9a9f7f922fc2ed0884c2014e591ac93fa"
+    },
+    {
+      "source": "assets/ornaments/gingerbread-man.png",
+      "target": "assets/ornaments/gingerbread-man.webp",
+      "width": 1274,
+      "height": 1234,
+      "original_bytes": 1466147,
+      "webp_bytes": 1023866,
+      "rgba_identical": true,
+      "rgba_sha256": "3fa12437f94ff2b616d5a249ceb68ef0608ad48d24436f2c635200be27558ac8"
+    },
+    {
+      "source": "assets/ornaments/heart-burgundy.png",
+      "target": "assets/ornaments/heart-burgundy.webp",
+      "width": 1374,
+      "height": 1145,
+      "original_bytes": 1596910,
+      "webp_bytes": 1134738,
+      "rgba_identical": true,
+      "rgba_sha256": "2042b8604cc3d0520b7019bc58ed26c63e39b0ef1198b49411325c27eeca1ef1"
+    },
+    {
+      "source": "assets/ornaments/mittens-green.png",
+      "target": "assets/ornaments/mittens-green.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2022057,
+      "webp_bytes": 1405792,
+      "rgba_identical": true,
+      "rgba_sha256": "2421a499d225865198ca57a746e5c65501549dd2b16d8706d230e8ea172df26c"
+    },
+    {
+      "source": "assets/ornaments/pinecone.png",
+      "target": "assets/ornaments/pinecone.webp",
+      "width": 1316,
+      "height": 1195,
+      "original_bytes": 1263153,
+      "webp_bytes": 930824,
+      "rgba_identical": true,
+      "rgba_sha256": "fae1311ffd7e64494ad4495f30bab63b954ad18acd04fdddbcd1610cb83aac83"
+    },
+    {
+      "source": "assets/ornaments/reindeer.png",
+      "target": "assets/ornaments/reindeer.webp",
+      "width": 1313,
+      "height": 1198,
+      "original_bytes": 1785053,
+      "webp_bytes": 1237654,
+      "rgba_identical": true,
+      "rgba_sha256": "6178c8bfc6d7357a045825e0cf72f6ac30332422a4638368dc0cc3c32bd14c53"
+    },
+    {
+      "source": "assets/ornaments/rocking-horse.png",
+      "target": "assets/ornaments/rocking-horse.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2138755,
+      "webp_bytes": 1429434,
+      "rgba_identical": true,
+      "rgba_sha256": "300fc00c77f9a798c25f44ad32b54d73094aef1548351ae5a1053fe8f36bfb7b"
+    },
+    {
+      "source": "assets/ornaments/santa-hat.png",
+      "target": "assets/ornaments/santa-hat.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 2088202,
+      "webp_bytes": 1394322,
+      "rgba_identical": true,
+      "rgba_sha256": "b55ff1cb88c7ff7242ee9a6f2d0b224783b39bfddc19514cb516bbefe78ea6bf"
+    },
+    {
+      "source": "assets/ornaments/snowflake-ivory.png",
+      "target": "assets/ornaments/snowflake-ivory.webp",
+      "width": 1305,
+      "height": 1205,
+      "original_bytes": 1524192,
+      "webp_bytes": 1097732,
+      "rgba_identical": true,
+      "rgba_sha256": "31f6ff765193a41f23ec92b38cd758a76d42947d9274fde9e2bd12b8f260b65c"
+    },
+    {
+      "source": "assets/ornaments/snowman.png",
+      "target": "assets/ornaments/snowman.webp",
+      "width": 1291,
+      "height": 1218,
+      "original_bytes": 1283693,
+      "webp_bytes": 941398,
+      "rgba_identical": true,
+      "rgba_sha256": "76aff4c81278db2947ba1d1dc0c1e4028e7c57e0f879df746163c7e5a6a0a6b6"
+    },
+    {
+      "source": "assets/ornaments/stocking-red.png",
+      "target": "assets/ornaments/stocking-red.webp",
+      "width": 1266,
+      "height": 1242,
+      "original_bytes": 1295743,
+      "webp_bytes": 951386,
+      "rgba_identical": true,
+      "rgba_sha256": "d20b34333994d46c3131bcd302ed75f33c75577c1a43164e2f7c8b70d9760c57"
+    },
+    {
+      "source": "assets/planters/planter-wood.png",
+      "target": "assets/planters/planter-wood.webp",
+      "width": 1536,
+      "height": 1024,
+      "original_bytes": 1847444,
+      "webp_bytes": 1304536,
+      "rgba_identical": true,
+      "rgba_sha256": "5e114433ec746fa7408c26942e4b95e01350b2f5004db94f1f9e068d29d6f65f"
+    },
+    {
+      "source": "assets/toppers/star-gold.png",
+      "target": "assets/toppers/star-gold.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1397112,
+      "webp_bytes": 991874,
+      "rgba_identical": true,
+      "rgba_sha256": "ea9c922d65989d7205e18c309c4851ca06fece896331d3a475b8bd3a85271321"
+    },
+    {
+      "source": "assets/trees/tree-blue.png",
+      "target": "assets/trees/tree-blue.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1638605,
+      "webp_bytes": 1243188,
+      "rgba_identical": true,
+      "rgba_sha256": "544b199b0c858caf1ca61f352046d12d908c001ed60cb088ab0244fca0969b42"
+    },
+    {
+      "source": "assets/trees/tree-gold.png",
+      "target": "assets/trees/tree-gold.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1732509,
+      "webp_bytes": 1244678,
+      "rgba_identical": true,
+      "rgba_sha256": "957dab3c73c1eaf3f47ea863ea79500deafda1a7d6652d2e35af27b2e68cacec"
+    },
+    {
+      "source": "assets/trees/tree-green.png",
+      "target": "assets/trees/tree-green.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1516351,
+      "webp_bytes": 1182178,
+      "rgba_identical": true,
+      "rgba_sha256": "5daafe2046168d2621b1880c28b7132cf21dbbb826662178e7597c89db32cb62"
+    },
+    {
+      "source": "assets/trees/tree-pink.png",
+      "target": "assets/trees/tree-pink.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1525222,
+      "webp_bytes": 1096392,
+      "rgba_identical": true,
+      "rgba_sha256": "9c135bc2bcf4ecea1ea534de0fa70bfcd60583a2806d35f0eff5c427690b4e72"
+    },
+    {
+      "source": "assets/trees/tree-white.png",
+      "target": "assets/trees/tree-white.webp",
+      "width": 1254,
+      "height": 1254,
+      "original_bytes": 1590604,
+      "webp_bytes": 1131514,
+      "rgba_identical": true,
+      "rgba_sha256": "805a1ee7ac637730e681f97abb0bd926e9d2758728b0835bd7e3d06960a6d27a"
+    }
+  ]
+}

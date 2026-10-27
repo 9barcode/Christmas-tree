@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {layers,rollers} from '../src/factory-scene-layers.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
-const source=join(root,'assets/factory/concept-original.png');
+const source=join(root,'assets/factory/concept-original.webp');
 const out=join(root,'assets/factory/original');mkdirSync(out,{recursive:true});
 const temp=mkdtempSync(join(tmpdir(),'factory-source-layers-'));
 function extract(id,rect,draw){

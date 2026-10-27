@@ -5,9 +5,9 @@ export async function slotPreview(tree,sequence,geometry,index){
  const layers=[];
  function add(path,kind,p,depth,front){const size=OBJECT_SIZES[kind];layers.push({path,p,size,depth,front})}
  const pot=tree.positions?.__pot??defaultPosition('pot');
- add('assets/planters/planter-wood.png','pot',pot,0,false);
- add(`assets/trees/tree-${tree.color}.png`,'tree',defaultPosition('tree'),1);
- add('assets/planters/planter-wood.png','pot',pot,floorDepth('pot',pot.y),true);
+ add('assets/planters/planter-wood.webp','pot',pot,0,false);
+ add(`assets/trees/tree-${tree.color}.webp`,'tree',defaultPosition('tree'),1);
+ add('assets/planters/planter-wood.webp','pot',pot,floorDepth('pot',pot.y),true);
  let floor=0,ornament=0;
  for(const a of sequence.slice(0,tree.count)){
   const n=a.kind==='floor'?floor++:a.kind==='ornament'?ornament++:0;

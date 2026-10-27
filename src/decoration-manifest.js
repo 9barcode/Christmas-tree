@@ -8,27 +8,27 @@ export default {
   "assets": [
     {
       "id": "gift-burgundy",
-      "path": "assets/decorations/gift-burgundy.png",
+      "path": "assets/decorations/gift-burgundy.webp",
       "kind": "floor"
     },
     {
       "id": "gift-green-large",
-      "path": "assets/decorations/gift-green-large.png",
+      "path": "assets/decorations/gift-green-large.webp",
       "kind": "floor"
     },
     {
       "id": "gift-cream",
-      "path": "assets/decorations/gift-cream.png",
+      "path": "assets/decorations/gift-cream.webp",
       "kind": "floor"
     },
     {
       "id": "gift-green-small",
-      "path": "assets/decorations/gift-green-small.png",
+      "path": "assets/decorations/gift-green-small.webp",
       "kind": "floor"
     },
     {
       "id": "bauble-burgundy-diamond",
-      "path": "assets/ornaments/bauble-burgundy-diamond.png",
+      "path": "assets/ornaments/bauble-burgundy-diamond.webp",
       "kind": "ornament",
       "originalNumber": 5,
       "width": 1327,
@@ -46,7 +46,7 @@ export default {
     },
     {
       "id": "bauble-gold-stripe",
-      "path": "assets/ornaments/bauble-gold-stripe.png",
+      "path": "assets/ornaments/bauble-gold-stripe.webp",
       "kind": "ornament",
       "originalNumber": 4,
       "width": 1315,
@@ -64,7 +64,7 @@ export default {
     },
     {
       "id": "bauble-green-snowflake",
-      "path": "assets/ornaments/bauble-green-snowflake.png",
+      "path": "assets/ornaments/bauble-green-snowflake.webp",
       "kind": "ornament",
       "originalNumber": 2,
       "width": 1309,
@@ -82,7 +82,7 @@ export default {
     },
     {
       "id": "bauble-ivory-smile",
-      "path": "assets/ornaments/bauble-ivory-smile.png",
+      "path": "assets/ornaments/bauble-ivory-smile.webp",
       "kind": "ornament",
       "originalNumber": 3,
       "width": 1285,
@@ -100,7 +100,7 @@ export default {
     },
     {
       "id": "bauble-red-smile",
-      "path": "assets/ornaments/bauble-red-smile.png",
+      "path": "assets/ornaments/bauble-red-smile.webp",
       "kind": "ornament",
       "originalNumber": 1,
       "width": 1301,
@@ -118,7 +118,7 @@ export default {
     },
     {
       "id": "bell-brass",
-      "path": "assets/ornaments/bell-brass.png",
+      "path": "assets/ornaments/bell-brass.webp",
       "kind": "ornament",
       "originalNumber": 8,
       "width": 1358,
@@ -136,7 +136,7 @@ export default {
     },
     {
       "id": "bow-red",
-      "path": "assets/ornaments/bow-red.png",
+      "path": "assets/ornaments/bow-red.webp",
       "kind": "ornament",
       "originalNumber": 6,
       "width": 1536,
@@ -154,7 +154,7 @@ export default {
     },
     {
       "id": "candy-cane",
-      "path": "assets/ornaments/candy-cane.png",
+      "path": "assets/ornaments/candy-cane.webp",
       "kind": "ornament",
       "originalNumber": 9,
       "width": 1024,
@@ -172,7 +172,7 @@ export default {
     },
     {
       "id": "cottage-snow",
-      "path": "assets/ornaments/cottage-snow.png",
+      "path": "assets/ornaments/cottage-snow.webp",
       "kind": "ornament",
       "originalNumber": 21,
       "width": 1536,
@@ -190,7 +190,7 @@ export default {
     },
     {
       "id": "dove-ivory",
-      "path": "assets/ornaments/dove-ivory.png",
+      "path": "assets/ornaments/dove-ivory.webp",
       "kind": "ornament",
       "originalNumber": 22,
       "width": 1536,
@@ -208,7 +208,7 @@ export default {
     },
     {
       "id": "drum-red",
-      "path": "assets/ornaments/drum-red.png",
+      "path": "assets/ornaments/drum-red.webp",
       "kind": "ornament",
       "originalNumber": 15,
       "width": 1312,
@@ -226,7 +226,7 @@ export default {
     },
     {
       "id": "fairy-lights",
-      "path": "assets/decorations/fairy-lights.png",
+      "path": "assets/decorations/fairy-lights.webp",
       "kind": "lights",
       "originalNumber": null,
       "width": 1254,
@@ -244,7 +244,7 @@ export default {
     },
     {
       "id": "gingerbread-house",
-      "path": "assets/ornaments/gingerbread-house.png",
+      "path": "assets/ornaments/gingerbread-house.webp",
       "kind": "ornament",
       "originalNumber": 11,
       "width": 1374,
@@ -262,7 +262,7 @@ export default {
     },
     {
       "id": "gingerbread-man",
-      "path": "assets/ornaments/gingerbread-man.png",
+      "path": "assets/ornaments/gingerbread-man.webp",
       "kind": "ornament",
       "originalNumber": 10,
       "width": 1274,
@@ -280,7 +280,7 @@ export default {
     },
     {
       "id": "heart-burgundy",
-      "path": "assets/ornaments/heart-burgundy.png",
+      "path": "assets/ornaments/heart-burgundy.webp",
       "kind": "ornament",
       "originalNumber": 23,
       "width": 1374,
@@ -298,7 +298,7 @@ export default {
     },
     {
       "id": "mittens-green",
-      "path": "assets/ornaments/mittens-green.png",
+      "path": "assets/ornaments/mittens-green.webp",
       "kind": "ornament",
       "originalNumber": 13,
       "width": 1536,
@@ -316,7 +316,7 @@ export default {
     },
     {
       "id": "pinecone",
-      "path": "assets/ornaments/pinecone.png",
+      "path": "assets/ornaments/pinecone.webp",
       "kind": "ornament",
       "originalNumber": 20,
       "width": 1316,
@@ -334,7 +334,7 @@ export default {
     },
     {
       "id": "reindeer",
-      "path": "assets/ornaments/reindeer.png",
+      "path": "assets/ornaments/reindeer.webp",
       "kind": "ornament",
       "originalNumber": 18,
       "width": 1313,
@@ -352,7 +352,7 @@ export default {
     },
     {
       "id": "rocking-horse",
-      "path": "assets/ornaments/rocking-horse.png",
+      "path": "assets/ornaments/rocking-horse.webp",
       "kind": "ornament",
       "originalNumber": 14,
       "width": 1536,
@@ -370,7 +370,7 @@ export default {
     },
     {
       "id": "santa-hat",
-      "path": "assets/ornaments/santa-hat.png",
+      "path": "assets/ornaments/santa-hat.webp",
       "kind": "ornament",
       "originalNumber": 19,
       "width": 1536,
@@ -388,7 +388,7 @@ export default {
     },
     {
       "id": "snowflake-ivory",
-      "path": "assets/ornaments/snowflake-ivory.png",
+      "path": "assets/ornaments/snowflake-ivory.webp",
       "kind": "ornament",
       "originalNumber": 16,
       "width": 1305,
@@ -406,7 +406,7 @@ export default {
     },
     {
       "id": "snowman",
-      "path": "assets/ornaments/snowman.png",
+      "path": "assets/ornaments/snowman.webp",
       "kind": "ornament",
       "originalNumber": 17,
       "width": 1291,
@@ -424,7 +424,7 @@ export default {
     },
     {
       "id": "stocking-red",
-      "path": "assets/ornaments/stocking-red.png",
+      "path": "assets/ornaments/stocking-red.webp",
       "kind": "ornament",
       "originalNumber": 12,
       "width": 1266,
@@ -442,7 +442,7 @@ export default {
     },
     {
       "id": "teddy-bear",
-      "path": "assets/decorations/teddy-bear.png",
+      "path": "assets/decorations/teddy-bear.webp",
       "kind": "floor",
       "originalNumber": null,
       "width": 1145,
@@ -460,7 +460,7 @@ export default {
     },
     {
       "id": "toy-car",
-      "path": "assets/decorations/toy-car.png",
+      "path": "assets/decorations/toy-car.webp",
       "kind": "floor",
       "originalNumber": null,
       "width": 1312,
@@ -478,7 +478,7 @@ export default {
     },
     {
       "id": "star-gold",
-      "path": "assets/toppers/star-gold.png",
+      "path": "assets/toppers/star-gold.webp",
       "kind": "topper",
       "originalNumber": null,
       "width": 1254,

@@ -1,7 +1,7 @@
 # 겨울 실내 배경과 모션 v1
 
-- `assets/backgrounds/cozy-europe-room.png`: 트리·화분·UI 없는 1024×1536 세로 배경.
-- `assets/effects/fire-glow.png`: 투명 불꽃 오버레이. 배경의 작은 기본 불씨 위에서 약하게 크기·투명도를 변화시킨다.
+- `assets/backgrounds/cozy-europe-room.webp`: 트리·화분·UI 없는 1024×1536 세로 배경.
+- `assets/effects/fire-glow.webp`: 투명 불꽃 오버레이. 배경의 작은 기본 불씨 위에서 약하게 크기·투명도를 변화시킨다.
 - `assets/backgrounds/cozy-room.css`, `cozy-room.js`: 재사용 가능한 불꽃 및 창밖 눈 모션.
 - `previews/cozy-room.html`: 배경과 확정 그린 트리를 합성한 브라우저 확인용 예제. 저장소 루트에서 HTTP로 제공해 확인한다.
 
