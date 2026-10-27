@@ -42,11 +42,11 @@ WITH catalog(asset_id,value) AS (VALUES
  ('star-gold',3)
 )
 INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,source,created_at)
-SELECT 'grant-20261027:'||u.id||':'||c.asset_id,u.id,c.asset_id,c.value,0,
- 'grant-20261027:'||u.id||':'||c.asset_id,unixepoch()*1000
-FROM tree_users u CROSS JOIN catalog c
+SELECT 'grant-20261027-v2:'||u.id||':'||c.asset_id||':'||n.slot,u.id,c.asset_id,c.value,0,
+ 'grant-20261027-v2:'||u.id||':'||c.asset_id||':'||n.slot,unixepoch()*1000
+FROM tree_users u CROSS JOIN catalog c CROSS JOIN (SELECT 1 AS slot UNION ALL SELECT 2) n
 WHERE u.toss_user_key LIKE 'anon:%'
- AND NOT EXISTS (SELECT 1 FROM tree_factory_items i WHERE i.user_id=u.id AND i.asset_id=c.asset_id AND i.sold_at IS NULL)
+ AND n.slot > (SELECT count(*) FROM tree_factory_items i WHERE i.user_id=u.id AND i.asset_id=c.asset_id AND i.sold_at IS NULL)
 ON CONFLICT DO NOTHING;
 
 WITH catalog(asset_id,value) AS (VALUES
