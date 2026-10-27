@@ -162,7 +162,8 @@ async function sellTree(env,user,body){
  const id=user.id+':tree-sale:'+body.adRequestId,now=Date.now();
  await env.DB.batch([
   q(env,"INSERT INTO tree_factory_payments(id,user_id,mode,promotion_code,debug_test,amount,state,created_at,updated_at,purpose,business_date) SELECT ?,?,?,?,?,50,'creating',?,?,'tree-sale',? WHERE EXISTS(SELECT 1 FROM tree_factory_ad_gates WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='completed') AND ((SELECT count(*) FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND business_date=? AND state='succeeded') + (SELECT count(*) FROM tree_factory_ledger WHERE id=? AND date(created_at/1000,'unixepoch','+9 hours')=?))<5 ON CONFLICT DO NOTHING",id,user.id,mode,mode==='test'&&!raw.startsWith('TEST_')?'TEST_'+raw:raw,0,now,now,date,gate.id,user.id,user.id,date,'tree-sale:'+user.id,date),
-  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND purpose='tree-sale')",gate.id,user.id,id,user.id)
+  q(env,"UPDATE tree_factory_ad_gates SET state='consumed' WHERE id=? AND user_id=? AND state='completed' AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND purpose='tree-sale')",gate.id,user.id,id,user.id),
+  q(env,"UPDATE tree_factory_items SET tree_sale_payment_id=? WHERE user_id=? AND sold_at IS NULL AND placed=1 AND tree_sale_payment_id IS NULL AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND purpose='tree-sale')",id,user.id,id,user.id)
  ]);
  const payment=await q(env,'SELECT id FROM tree_factory_payments WHERE id=? AND user_id=?',id,user.id).first();
  if(!payment){const sold=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=? AND date(created_at/1000,'unixepoch','+9 hours')=?",'tree-sale:'+user.id,date).first();if(sales.n+(sold?1:0)>=5)fail('tree_sale_daily_limit');fail('payment_in_progress');}
