@@ -58,3 +58,6 @@ for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(
  const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
  console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
 }
+
+const saleSchema=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT type,name,sql FROM sqlite_master WHERE name='tree_factory_payments' OR (type='trigger' AND tbl_name='tree_factory_payments')"],true));
+console.log('Sale schema diagnostic:',JSON.stringify(saleSchema.flatMap(r=>r.results??[])));
