@@ -95,15 +95,59 @@ function syncTreeSaleButton(){
  claim.disabled=busy||!ready||!snapshot.treeSaleReady;
  utilities.append(claim);
 }
+function showTreeSaleResult(kind='pending',detail=''){
+ const content=node('div','tree-sale-result');
+ const icons={pending:'assets/thumbnails/star-gold.webp',success:'assets/thumbnails/star-gold.webp',failed:'assets/ui/painted/book.webp'};
+ const artwork=node('img','tree-sale-result-art');artwork.src=icons[kind]||icons.pending;artwork.alt='';
+ const messages={
+  pending:'광고 시청을 마쳤어요. 서버에서 50P 지급 결과를 확인하고 있어요.',
+  success:'트리 판매가 완료됐어요. 토스포인트 50P 지급이 확인됐어요.',
+  test:'테스트 판매가 완료됐어요. 실제 토스포인트는 지급되지 않았어요.',
+  failed:'50P 지급에 실패했어요. 장식은 다시 사용할 수 있도록 보관돼요.',
+  unknown:'지급 결과를 아직 확인하지 못했어요. 다시 광고를 보지 말고 기존 거래 결과부터 확인해 주세요.'
+ };
+ content.append(artwork,node('p','tree-sale-result-message',messages[kind]||messages.unknown));
+ if(detail)content.append(node('p','tree-sale-result-detail',detail));
+ if(kind==='pending'||kind==='unknown'){
+  const check=button('지급 결과 다시 확인',()=>run(async()=>{
+   try{await recoverFactoryAd();snapshot=await factoryCall('recover',{});await renderTree();renderPage();showTreeSaleResultFromSnapshot();}
+   catch(error){showTreeSaleResult('unknown',error.message||'잠시 후 다시 확인해 주세요.');}
+  }),'factory-button');content.append(check);
+ }
+ content.append(button('확인',()=>$('dialog').close(),'factory-button tree-sale-result-close'));
+ modal(kind==='success'?'50P 지급 완료':kind==='test'?'테스트 판매 완료':kind==='failed'?'트리 판매 실패':'트리 판매 결과 확인',content);
+ $('dialog').classList.add('tree-sale-result-dialog');
+}
+function showTreeSaleResultFromSnapshot(){
+ const payment=snapshot?.payments?.find(p=>p.purpose==='tree-sale');
+ if(payment?.state==='failed')showTreeSaleResult('failed');
+ else if(payment?.state==='succeeded'&&!snapshot.treeSalePending)showTreeSaleResult(payment.mode==='test'?'test':'success');
+ else showTreeSaleResult('pending');
+}
 function openTreeSaleConfirmation(){
  const treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  if(!treeReady||snapshot.treeSold||!snapshot.treeSaleReady)return;
  const confirm=node('div');
  const summary=node('p','','트리 판매로 50P · 하루 5회\n배치한 장식은 사라져요.\n도감 기록은 유지돼요.');summary.style.whiteSpace='pre-line';confirm.append(summary);
  confirm.append(adButton('트리 판매하고 50P 받기',()=>run(async()=>{
-  if(preview){if(!previewState.treeSold){previewState.treeSaleCount++;previewState.treeSold=previewState.treeSaleCount>=5;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
-  else{const ad=await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
-  $('dialog').close();await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(preview?'미리보기 완료 · 실제 지급은 없어요.':payout?.mode==='test'&&payout?.state==='succeeded'?'테스트 지급 확인 · 실제 포인트는 지급되지 않았어요.':payout?.state==='succeeded'&&!snapshot.treeSalePending?'트리 판매 완료 · 토스포인트 50P 지급':payout?.state==='failed'?'포인트 지급 실패 · 트리는 그대로예요. 다시 시도해 주세요.':'지급 결과를 확인 중이에요. 트리는 확인 전까지 보관돼요.');
+  if(preview){
+   if(!previewState.treeSold){previewState.treeSaleCount++;previewState.treeSold=previewState.treeSaleCount>=5;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}
+   await load();await renderTree();renderPage();showTreeSaleResult('test');return;
+  }
+  let adFinished=false;
+  try{
+   const ad=await factoryAd('tree-sale',{}, {onAdFinished:()=>{adFinished=true;showTreeSaleResult('pending');}});
+   snapshot=await factoryCall('claim',{adRequestId:ad.requestId});
+   await renderTree();renderPage();showTreeSaleResultFromSnapshot();
+  }catch(error){
+   if(!adFinished)throw error;
+   // Ad proof is journaled. Recover an existing request; never trigger another ad or claim here.
+   try{snapshot=await factoryCall('recover',{});await renderTree();renderPage();}catch{/* Keep prior snapshot. */}
+   const payment=snapshot?.payments?.find(p=>p.purpose==='tree-sale');
+   if(payment?.state==='succeeded'&&!snapshot.treeSalePending)showTreeSaleResultFromSnapshot();
+   else if(payment?.state==='failed')showTreeSaleResult('failed');
+   else showTreeSaleResult('unknown',error.message||'잠시 후 다시 확인해 주세요.');
+  }
  })),button('취소',()=>$('dialog').close()));
  modal('트리 판매',confirm);
 }
