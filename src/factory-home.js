@@ -89,7 +89,7 @@ function syncTreeSaleButton(){
  const available=snapshot?.collection.length===30&&(snapshot.treeSalePending||!snapshot.treeSold);
  utilities.classList.toggle('has-tree-sale',!!available);
  if(!available)return;
- if(snapshot.treeSalePending){utilities.append(button('트리 판매 결과 확인',()=>run(async()=>{snapshot=await factoryCall('recover',{});await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(payout?.state==='failed'?'포인트 지급 실패 · 다시 시도해 주세요.':payout?.state==='succeeded'&&!snapshot.treeSalePending?(payout.mode==='test'?'테스트 지급 확인 · 실제 포인트는 지급되지 않았어요.':'트리 판매 완료 · 토스포인트 50P 지급'):'지급 결과를 확인 중이에요. 잠시 후 다시 확인해 주세요.');}),'factory-button tree-sale-link'));return;}
+ if(snapshot.treeSalePending){utilities.append(button('트리 판매 결과 확인',()=>run(async()=>{snapshot=await factoryCall('recover',{});await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(payout?.state==='failed'?'포인트 지급 실패 · 다시 시도해 주세요.':payout?.state==='succeeded'&&!snapshot.treeSalePending?(payout.mode==='test'?'트리 판매 완료 · 포인트 지급 내역 미확인':'트리 판매 완료 · 토스포인트 50P 지급'):'지급 결과를 확인 중이에요. 잠시 후 다시 확인해 주세요.');}),'factory-button tree-sale-link'));return;}
  const ready=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  const claim=ready&&snapshot.treeSaleReady?adButton('트리 판매하기 · 50P',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button(!snapshot.treeSaleReady?'트리 판매 포인트 지급 준비 중':'장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
  claim.disabled=busy||!ready||!snapshot.treeSaleReady;
@@ -101,8 +101,8 @@ function showTreeSaleResult(kind='pending',detail=''){
  const artwork=node('img','tree-sale-result-art');artwork.src=icons[kind]||icons.pending;artwork.alt='';
  const messages={
   pending:'광고 시청을 마쳤어요. 서버에서 50P 지급 결과를 확인하고 있어요.',
-  success:'트리 판매가 완료됐어요. 토스포인트 50P 지급이 확인됐어요.',
-  test:'테스트 판매가 완료됐어요. 실제 토스포인트는 지급되지 않았어요.',
+  success:'트리 판매가 완료됐어요. 토스포인트 50P가 지급됐어요.',
+  test:'트리 판매가 완료됐어요. 토스포인트 지급 내역은 확인되지 않았어요.',
   failed:'50P 지급에 실패했어요. 장식은 다시 사용할 수 있도록 보관돼요.',
   unknown:'지급 결과를 아직 확인하지 못했어요. 다시 광고를 보지 말고 기존 거래 결과부터 확인해 주세요.'
  };
@@ -115,7 +115,7 @@ function showTreeSaleResult(kind='pending',detail=''){
   }),'factory-button');content.append(check);
  }
  content.append(button('확인',()=>$('dialog').close(),'factory-button tree-sale-result-close'));
- modal(kind==='success'?'50P 지급 완료':kind==='test'?'테스트 판매 완료':kind==='failed'?'트리 판매 실패':'트리 판매 결과 확인',content);
+ modal(kind==='success'||kind==='test'?'트리 판매 완료':kind==='failed'?'트리 판매 실패':'트리 판매 결과 확인',content);
  $('dialog').classList.add('tree-sale-result-dialog');
 }
 function showTreeSaleResultFromSnapshot(){
