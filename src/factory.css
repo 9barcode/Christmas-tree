@@ -136,3 +136,11 @@ body[data-page=factory] .concept-factory .production-counter{top:19.1%}
 /* Cover the text baked into the concept art only while an ad is loading. */
 .concept-factory .production-panel>.factory-button[data-ad-waiting="true"]{background:linear-gradient(110deg,#477d4a,#33683e);border:1px solid #396843;box-shadow:inset 0 2px 0 #b0d48a55;color:#fff8e6!important;filter:none}
 .concept-factory .overtime-panel .overtime-button[data-ad-waiting="true"]{background:linear-gradient(#dc663c,#c54b2c);border:1px solid #ac4e25;box-shadow:inset 0 2px #f9ac6d77;color:#fff8e6!important;filter:none!important}
+
+/* Point-exchange success: shared parchment and green button visual language. */
+.exchange-success-dialog .exchange-success-content{text-align:center;padding:4px 8px 8px;color:#57351f}
+.exchange-success-dialog .exchange-success-art{display:block;width:110px;height:110px;max-height:110px;object-fit:contain;margin:2px auto 12px;filter:drop-shadow(0 4px 6px #59351c44)}
+.exchange-success-message{margin:8px auto;font-size:19px;line-height:1.45;word-break:keep-all}
+.exchange-success-amount{display:block;margin:10px auto;font-size:34px;font-weight:400;color:#2f7148}
+.exchange-success-note{margin:8px auto 16px;color:#835b39;font-size:14px;line-height:1.5;word-break:keep-all}
+.exchange-success-dialog .exchange-success-confirm{display:block;max-width:320px;margin:12px auto 0}
