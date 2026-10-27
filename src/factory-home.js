@@ -1,4 +1,5 @@
 import assetBounds from './asset-bounds.js';
+import {imageCache} from './image-cache.js';
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
 import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
@@ -53,6 +54,9 @@ function showGuide(){
 $('.guide-link').onclick=showGuide;
 $('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 const bounds=new Map(Object.entries(assetBounds));
+let lastTreeScene='';
+let preparedTreePhoto=null;
+window.addEventListener('pagehide',()=>{preparedTreePhoto=null;});
 async function assetNode(path,className){
  let g=bounds.get(path);if(!g){const img=new Image();img.src=path;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);const data=ctx.getImageData(0,0,c.width,c.height).data;let x0=c.width,y0=c.height,x1=0,y1=0;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(data[(y*c.width+x)*4+3]>16){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}g={box:`${x0} ${y0} ${x1-x0+1} ${y1-y0+1}`,w:c.width,h:c.height};bounds.set(path,g);}
  // Keep each decoration's silhouette proportional, as in inventory thumbnails.
@@ -62,6 +66,9 @@ async function assetNode(path,className){
 }
 async function renderTree(){
  $('.tree-remove-action')?.remove();
+ const scene=JSON.stringify(snapshot.items.filter(i=>i.placed).map(i=>[i.id,i.asset_id,i.x,i.y]));
+ if(scene===lastTreeScene){syncTreeSaleButton();return;}
+ preparedTreePhoto=null;
  const tree=await assetNode('assets/trees/tree-green.png','tree'),pot=await assetNode('assets/planters/planter-wood.png','pot'),back=await assetNode('assets/planters/planter-wood.png','pot-back');pot.style.clipPath=planterClipPath(true);back.style.clipPath=planterClipPath(false);
  snapshot.pot=defaultPosition('pot');
  for(const target of [pot,back])Object.assign(target.style,{width:OBJECT_SIZES.pot.w+'%',height:OBJECT_SIZES.pot.h+'%',left:snapshot.pot.x+'%',top:snapshot.pot.y+'%',transform:'translate(-50%,-50%)',zIndex:String(target===back?0:floorDepth('pot',snapshot.pot.y))});
@@ -74,6 +81,7 @@ async function renderTree(){
  }
  $('.pot-back')?.remove();$('.garden').prepend(back);$('.tree').replaceWith(tree);$('.pot').replaceWith(pot);$('.ornaments').replaceChildren(...ornaments);$('.floor').replaceChildren(...floor);
  $('.progress').textContent=`나만의 트리 · 장식 ${snapshot.items.filter(i=>i.placed).length}개`;
+ lastTreeScene=scene;
  syncTreeSaleButton();
 }
 function syncTreeSaleButton(){
@@ -239,7 +247,7 @@ async function treePicture(){
  const nodes=[...home.querySelectorAll('.pot-back,.tree,.pot,.ornament,.floor-item')].sort((a,b)=>(parseInt(getComputedStyle(a).zIndex)||0)-(parseInt(getComputedStyle(b).zIndex)||0));
  for(const node of nodes){
   const svg=node.querySelector('svg'),source=svg?.querySelector('image');if(!source)continue;
-  const img=new Image();img.src=source.getAttribute('href');await img.decode();const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();
+  const img=await imageCache.load(source.getAttribute('href'));const [x,y,w,h]=svg.getAttribute('viewBox').split(' ').map(Number),r=node.getBoundingClientRect();
   let dx=(r.left-rect.left)*scale,dy=(r.top-rect.top)*scale,dw=r.width*scale,dh=r.height*scale;
   // Match the SVG's centered contain fit when exporting the decorated tree.
   if(svg.getAttribute('preserveAspectRatio')!=='none'){
@@ -263,7 +271,13 @@ function showShare(){
  }
  const save=button('사진으로 저장하기',()=>send(save,false)),share=button('친구에게 보내기',()=>send(share,true));save.disabled=share.disabled=true;
  content.append(note,save,share);modal('내 트리 자랑하기',content);
- const prepare=createPhotoPreparation({prepare:()=>treePicture().then(preparePhoto),isCurrent:()=>snapshot.revision===revision&&content.isConnected&&$('dialog').open,
+ const prepare=createPhotoPreparation({prepare:()=>{
+  const rect=$('.home').getBoundingClientRect(),key=lastTreeScene+':'+rect.width+':'+rect.height;
+  if(preparedTreePhoto?.key===key)return preparedTreePhoto.promise;
+  const entry={key,promise:null};preparedTreePhoto=entry;
+  entry.promise=treePicture().then(preparePhoto).catch(error=>{if(preparedTreePhoto===entry)preparedTreePhoto=null;throw error;});
+  return entry.promise;
+ },isCurrent:()=>snapshot.revision===revision&&content.isConnected&&$('dialog').open,
   onBusy:()=>{save.disabled=share.disabled=true;},onReady:value=>{picture=value;note.textContent='정성껏 꾸민 트리를 사진으로 간직해요.';save.disabled=share.disabled=false;},onError:()=>{note.textContent='사진 준비를 다시 시도해 주세요.';save.textContent='다시 시도';save.disabled=false;share.disabled=true;}});
  prepare();
 }

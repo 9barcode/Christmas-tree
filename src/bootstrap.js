@@ -1,5 +1,6 @@
 import {loadServiceConfig} from './service-config.js';
 import {startHomeBanner,startLoadingBanners} from './banner.js';
+import {startStaticCache} from './static-cache.js';
 // Ad adapters can request current Worker settings without rebuilding the AIT.
 window.treeServiceConfig = {load: loadServiceConfig};
 import {DOT_INTERVAL_MS,loadingText,waitForHomeReady} from './loading-state.js';
@@ -28,6 +29,7 @@ try {
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   stop();home.inert=false;home.removeAttribute('aria-hidden');
   stopLoadingBanners();document.body.classList.remove('is-loading');splash.remove();window.dispatchEvent(new Event('tree:home-ready'));
+  startStaticCache();
   // Advertising is optional: it never blocks home readiness or loading recovery.
   // BM v3 keeps the tree scene and photos free of banners.
 } catch(error) {

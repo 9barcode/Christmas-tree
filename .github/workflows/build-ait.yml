@@ -9,6 +9,7 @@ on:
       - 'assets/**'
       - 'index.html'
       - 'scripts/build-web.mjs'
+      - 'asset-cache-worker.js'
       - 'scripts/api-config.mjs'
       - 'apps-in-toss.config.ts'
       - 'package.json'
