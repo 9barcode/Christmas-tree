@@ -61,3 +61,9 @@ for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(
 
 const saleSchema=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT type,name,sql FROM sqlite_master WHERE name='tree_factory_payments' OR (type='trigger' AND tbl_name='tree_factory_payments')"],true));
 console.log('Sale schema diagnostic:',JSON.stringify(saleSchema.flatMap(r=>r.results??[])));
+
+const launchResetTable=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT name FROM sqlite_master WHERE name='tree_launch_20261027_audit'"],true));
+if(launchResetTable.some(r=>r.results?.length)){
+ const launchResetAudit=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT * FROM tree_launch_20261027_audit"],true));
+ console.log('Launch reset audit:',JSON.stringify(launchResetAudit.flatMap(r=>r.results??[])));
+}
