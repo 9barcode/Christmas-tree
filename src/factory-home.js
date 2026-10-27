@@ -91,7 +91,7 @@ function openTreeSaleConfirmation(){
  const treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  if(!treeReady||snapshot.treeSold||!snapshot.treeSaleReady)return;
  const confirm=node('div');
- confirm.append(node('p','','서로 다른 장식 30개로 꾸민 트리를 판매하면 토스포인트 50P를 받아요. 트리 판매와 보상은 하루 한 번 가능해요. 지급이 확인되면 배치한 장식은 보관함에서 사라지고, 도감 기록은 유지돼요.'));
+ const summary=node('p','','트리 판매로 50P · 하루 1회\n배치한 장식은 사라져요.\n도감 기록은 유지돼요.');summary.style.whiteSpace='pre-line';confirm.append(summary);
  confirm.append(adButton('트리 판매하고 50P 받기',()=>run(async()=>{
   if(preview){if(!previewState.treeSold){previewState.treeSold=true;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
   else{const ad=await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
