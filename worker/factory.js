@@ -55,6 +55,15 @@ async function saleItems(env,user,ids){
  if(rows.length!==ids.length)fail('item_unavailable');
  if(rows.some(i=>i.placed))fail('item_placed');
 }
+async function unreconciledTreeSale(env,user){
+ // Fail closed when a successful 50P payout has no 30 consumed ornaments.
+ // This also catches legacy sales recorded as finalized before the inventory was removed.
+ return q(env,`SELECT p.id FROM tree_factory_payments p
+  WHERE p.user_id=? AND p.purpose='tree-sale' AND p.state='succeeded'
+  AND (SELECT count(*) FROM tree_factory_items i
+       WHERE i.user_id=p.user_id AND i.tree_sale_payment_id=p.id AND i.sold_at IS NOT NULL)<>30
+  LIMIT 1`,user.id).first();
+}
 async function reserve(env,user,body){
  if(['sell','tree-sale','exchange'].includes(body.purpose)){
   const configuredAd=publicAdConfig(env)[body.purpose==='exchange'?'rewardedAdGroupId':'interstitialAdGroupId'];if(!configuredAd)fail('ad_not_configured');const ad=configuredAd;
@@ -63,6 +72,7 @@ async function reserve(env,user,body){
    const ids=saleIds(body);await saleItems(env,user,ids);itemId=saleKey(ids);
   }else if(body.purpose==='tree-sale'){
    if(!env.TOSS_MTLS||!String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim())fail('tree_sale_not_configured');
+   if(await unreconciledTreeSale(env,user))fail('tree_sale_reconciliation_required');
    const date=kstDate();
    const sales=await q(env,"SELECT count(*) AS n FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND business_date=? AND state='succeeded'",user.id,date).first();
    const prior=await q(env,"SELECT id FROM tree_factory_ledger WHERE id=? AND date(created_at/1000,'unixepoch','+9 hours')=?",'tree-sale:'+user.id,date).first();if(sales.n+(prior?1:0)>=5)fail('tree_sale_daily_limit');
@@ -147,6 +157,7 @@ async function place(env,user,body){
  const results=await env.DB.batch(ops);if(results[0].meta.changes!==1)fail('positions_conflict');
 }
 async function sellTree(env,user,body){
+ if(await unreconciledTreeSale(env,user))fail('tree_sale_reconciliation_required');
  if(typeof body.adRequestId!=='string')fail('invalid_request');
  const gate=await q(env,'SELECT * FROM tree_factory_ad_gates WHERE id=? AND user_id=?',body.adRequestId,user.id).first();
  if(!gate||gate.purpose!=='tree-sale'||gate.state!=='completed'||gate.date!==kstDate())fail('ad_not_completed');
@@ -210,5 +221,5 @@ export async function handleFactory(request,env){
  for(const r of rows.results)await advanceFactoryPayment(env,user,r.id);
  }
  return reply(await view(env,user));
- }catch(error){const known=['item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_sale_daily_limit','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','tree_sale_not_configured','payment_in_progress'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
+ }catch(error){const known=['tree_sale_reconciliation_required','item_placed','invalid_request','exchange_empty','ad_in_progress','collection_incomplete','tree_not_ready','tree_sale_daily_limit','duplicate_decoration','catalog_not_configured','ad_not_configured','daily_limit','request_not_found','request_expired','ad_not_completed','item_unavailable','fixed_item_duplicate','positions_conflict','exchange_not_configured','tree_sale_not_configured','payment_in_progress'];const code=known.includes(error.message)?error.message:'service_unavailable';console.warn('[tree.factory]',{path,code});return reply({error:code},code.endsWith('not_configured')||code==='service_unavailable'?503:409);}
 }
