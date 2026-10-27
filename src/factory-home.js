@@ -29,7 +29,7 @@ function adWaitingButton(text,fn,cls='factory-button',withIcon=false){
  return b;
 }
 function adButton(text,fn,cls='factory-button ad-action'){return adWaitingButton(text,fn,cls,true);}
-function modal(title,content){if($('dialog').open)$('dialog').close();$('dialog').classList.remove('guide-dialog','tree-sale-result-dialog');const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
+function modal(title,content){if($('dialog').open)$('dialog').close();$('dialog').classList.remove('guide-dialog','tree-sale-result-dialog','exchange-success-dialog');const h=node('h2','',title);h.id='modal-title';$('.modal-content').replaceChildren(h,content);$('dialog').setAttribute('aria-labelledby','modal-title');$('dialog').showModal();}
 function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));for(const root of document.body.children)if(!root.matches('.toast'))root.inert=value;}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);syncTreeSaleButton();renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);syncTreeSaleButton();renderPage();}
@@ -101,6 +101,17 @@ function syncTreeSaleButton(){
  const claim=ready&&snapshot.treeSaleReady?button('트리 판매하기 · 50P',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button(!snapshot.treeSaleReady?'트리 판매 포인트 지급 준비 중':'장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
  claim.disabled=busy||!ready||!snapshot.treeSaleReady;
  utilities.append(claim);
+}
+function showExchangeSuccess(payment){
+ const content=node('div','exchange-success-content');
+ const image=node('img','exchange-success-art');image.src='assets/thumbnails/star-gold.webp';image.alt='';
+ const amount=Number(payment?.amount);
+ content.append(image,node('p','exchange-success-message','토스포인트 교환이 완료됐어요!'));
+ if(Number.isFinite(amount)&&amount>0)content.append(node('strong','exchange-success-amount',amount.toLocaleString('ko-KR')+'P'));
+ content.append(node('p','exchange-success-note','교환 내역에서 지급 결과를 확인할 수 있어요.'));
+ content.append(button('확인',()=>$('dialog').close(),'factory-button exchange-success-confirm'));
+ modal('토스포인트 교환 완료',content);
+ $('dialog').classList.add('exchange-success-dialog');
 }
 function showTreeSaleResult(kind='pending',detail=''){
  const content=node('div','tree-sale-result');
@@ -200,7 +211,7 @@ function renderPage(){
  const content=node('div','factory-content');shell.append(content);
  if(active!=='collection'){
  const modes=node('div','inventory-modes');for(const [mode,label] of [[false,'보유 장식'],[true,'판매하기']]){const b=button(label,()=>{selling=mode;saleSelection.clear();renderPage();},selling===mode?'selected':'');modes.append(b);}content.append(modes);
- const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=(pending?button:adButton)(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'preview-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('미리보기 교환 완료');return;}let adRequestId;if(!pending){const ad=await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId});renderPage();const last=snapshot.payments[0];toast(last?.state==='succeeded'?(last.mode==='test'?'테스트 교환 확인 · 실제 지급 없음':'포인트 교환 완료'):last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
+ const wallet=node('section','wallet');wallet.append(node('strong','',`교환 가능 ${snapshot.balance}벨`));const pending=snapshot.payments.some(p=>!['failed','succeeded'].includes(p.state));const exchangeButton=(pending?button:adButton)(pending?'교환 결과 확인':'토스포인트 교환',()=>run(async()=>{if(preview){if(previewState.balance<1){toast('교환할 벨이 없어요.');return;}const amount=previewState.balance;previewState.balance=0;previewState.payments.unshift({id:'preview-'+Date.now(),amount,mode:'test',state:'succeeded'});await load();renderPage();toast('미리보기 교환 완료');return;}let adRequestId;if(!pending){const ad=await factoryAd('exchange');adRequestId=ad.requestId;}snapshot=await factoryCall(pending?'recover':'exchange',pending?{requestId:crypto.randomUUID()}:{requestId:crypto.randomUUID(),adRequestId});renderPage();const last=snapshot.payments[0];if(last?.state==='succeeded'&&last.mode!=='test')showExchangeSuccess(last);else toast(last?.state==='succeeded'?'테스트 교환 확인 · 실제 지급 없음':last?.state==='failed'?'교환 실패 · 잔액을 돌려드렸어요.':'교환 결과를 확인 중이에요.');}), 'factory-button ad-action exchange-action');exchangeButton.disabled=busy||(!pending&&(!snapshot.exchangeReady||snapshot.balance<1));wallet.append(exchangeButton);content.append(wallet,node('p','fine-print','1벨 = 1토스포인트 · 교환 시 보유 벨 전액을 사용해요.'));
  }
  const filters=node('div','value-filters');for(const value of [0,1,2,3]){const b=button(value?value+'벨':'전체',()=>{filter=value;renderPage();},filter===value?'selected':'');b.setAttribute('aria-pressed',String(filter===value));filters.append(b);}content.append(filters);
  const grid=node('div',active==='collection'?'ornament-grid collection-grid':'ornament-grid inventory-grid');
