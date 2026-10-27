@@ -45,14 +45,10 @@ if(auditTables.some(r=>r.results?.length)){
  console.log('Decoration grant audit:',JSON.stringify(audit.flatMap(r=>r.results??[])));
 }
 
+
 // Aggregate-only diagnostics: no user IDs, session tokens, or provider keys.
-const resetAuditTable=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT name FROM sqlite_master WHERE name='tree_test_reset_20261027_users'"],true));
-if(resetAuditTable.some(r=>r.results?.length)){
- for(const [label,sql] of [["Pre-release reset audit","SELECT (SELECT count(*) FROM tree_test_reset_20261027_users) AS reset_accounts,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%') AS granted_items,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%' AND sold_at IS NULL) AS remaining_granted_items,(SELECT count(*) FROM tree_factory_items WHERE source LIKE 'test-reset-20261027:%' AND placed=1 AND sold_at IS NULL) AS placed_granted_items"],["Tree sale inventory audit","SELECT p.state,p.mode,p.finalized_at IS NOT NULL AS finalized,count(*) AS payments,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NOT NULL)) AS consumed_items,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NULL)) AS reserved_items FROM tree_factory_payments p WHERE p.purpose='tree-sale' GROUP BY p.state,p.mode,p.finalized_at IS NOT NULL"]]){
-  const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
-  console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
- }
-}
+const saleInventory=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT p.state,p.mode,p.finalized_at IS NOT NULL AS finalized,count(*) AS payments,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NOT NULL)) AS consumed_items,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NULL)) AS reserved_items FROM tree_factory_payments p WHERE p.purpose='tree-sale' GROUP BY p.state,p.mode,p.finalized_at IS NOT NULL"],true));
+console.log('Tree sale inventory audit:',JSON.stringify(saleInventory.flatMap(r=>r.results??[])));
 
 for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(*) AS requests FROM tree_analytics_events WHERE endpoint IN('/api/v3/ads/reserve','/api/v3/ads/complete','/api/v3/claim','/api/v3/recover') AND created_at > datetime('now','-2 hours') GROUP BY endpoint,status"],["Sale payout stages","SELECT state,error_code,count(*) AS payments FROM tree_factory_payments WHERE purpose='tree-sale' GROUP BY state,error_code"]]){
  const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
@@ -62,8 +58,3 @@ for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(
 const saleSchema=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT type,name,sql FROM sqlite_master WHERE name='tree_factory_payments' OR (type='trigger' AND tbl_name='tree_factory_payments')"],true));
 console.log('Sale schema diagnostic:',JSON.stringify(saleSchema.flatMap(r=>r.results??[])));
 
-const launchResetTable=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT name FROM sqlite_master WHERE name='tree_launch_20261027_audit'"],true));
-if(launchResetTable.some(r=>r.results?.length)){
- const launchResetAudit=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT * FROM tree_launch_20261027_audit"],true));
- console.log('Launch reset audit:',JSON.stringify(launchResetAudit.flatMap(r=>r.results??[])));
-}
