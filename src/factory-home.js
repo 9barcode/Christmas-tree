@@ -280,7 +280,9 @@ function showItem(a,owned,fresh=false,chosenId=null){
   await saveLayout();await renderTree();
  }catch(error){snapshot=before;await renderTree();throw error;}
  }));
- placementButton.disabled=busy||duplicatePlaced;c.append(placementButton);
+ // The reward dialog is created while production is still busy. Root inert handles that
+ // transient state; disabling here would leave the placement action disabled forever.
+ placementButton.disabled=duplicatePlaced;c.append(placementButton);
  if(item.value>0)c.append(button('판매하기',()=>{$('dialog').close();selling=true;filter=0;saleSelection.clear();setPageAfterAction('inventory');}));
 
  modal(a.name,c);
