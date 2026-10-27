@@ -57,11 +57,15 @@ export async function advanceFactoryPayment(env,user,id) {
     const changed = await env.DB.prepare('UPDATE tree_factory_payments SET state = ?,error_code = ?,updated_at = ? WHERE id = ? AND lease_token = ?')
       .bind(next,code,Date.now(),id,lease).run();
     if (changed.meta?.changes !== 1) throw Error('payment_lease_lost');
+    console.info('[tree.promotion.payment]', {event:'state',purpose:payment.purpose,mode:payment.mode,state:next,errorCode:code});
   }
+  let stage = 'load';
   try {
     payment = await read(env,user,id);
+    console.info('[tree.promotion.payment]', {event:'start',purpose:payment.purpose,mode:payment.mode,state:payment.state});
     const resuming = ['submitted','pending'].includes(payment.state);
     if (payment.state === 'creating') {
+      stage = 'get-key';
       const result = await provider(env,user,'execute-promotion/get-key',{});
       const key = typeof result.success === 'object' ? result.success?.key : null;
       if (result.resultType !== 'SUCCESS' || !key) {
@@ -79,6 +83,7 @@ export async function advanceFactoryPayment(env,user,id) {
       }
       if (!payment.provider_key) throw Error('payment_key_missing');
       await state('submitted');
+      stage = 'execute-promotion';
       const result = await provider(env,user,'execute-promotion',{
         promotionCode:payment.promotion_code,key:payment.provider_key,amount:payment.amount,
       });
@@ -92,18 +97,21 @@ export async function advanceFactoryPayment(env,user,id) {
     payment = await read(env,user,id);
     if (payment.state !== 'succeeded') {
       if (!payment.provider_key) throw Error('payment_key_missing');
+      stage = 'execution-result';
       const result = await provider(env,user,'execution-result',{promotionCode:payment.promotion_code,key:payment.provider_key});
       if (result.resultType === 'SUCCESS' && result.success === 'SUCCESS') await state('succeeded');
       else if (result.resultType === 'SUCCESS' && result.success === 'FAILED') await state('failed','provider_failed');
       else if (payment.mode === 'test' && result.resultType === 'FAIL' && String(result.error?.errorCode)==='4111') await state('failed','test_result_unavailable');
       else if (resuming && result.resultType === 'FAIL' && String(result.error?.errorCode)==='4111' && Date.now()-payment.key_issued_at < 55*60000) {
         // Retry ONLY the same key. Never issue a replacement for an ambiguous transfer.
+        stage = 'retry-execute-promotion';
         await provider(env,user,'execute-promotion',{promotionCode:payment.promotion_code,key:payment.provider_key,amount:payment.amount});
         await state('pending');
       } else await state('pending',result.error?.errorCode ? String(result.error.errorCode) : null);
     }
-  } catch {
-    console.warn('[tree.promotion.payment]',{event:'resume_required'});
+  } catch (error) {
+    const kind = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'request_or_internal_error';
+    console.warn('[tree.promotion.payment]',{event:'resume_required',stage,kind,purpose:payment?.purpose,mode:payment?.mode});
   } finally {
     await env.DB.prepare('UPDATE tree_factory_payments SET lease_token = NULL,lease_until = 0 WHERE id = ? AND lease_token = ?').bind(id,lease).run();
   }
