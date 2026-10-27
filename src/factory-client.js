@@ -9,7 +9,7 @@ export async function recoverFactoryAd(){
  if(!saved.proof){if(saved.expiresAt>Date.now())throw Error('광고가 진행 중이에요. 잠시 후 다시 확인해 주세요.');await factoryCall('ads/cancel',{requestId:saved.requestId});localStorage.removeItem(key);return null;}
  try{const result=await factoryCall('ads/complete',saved.proof);localStorage.removeItem(key);return result;}catch(e){if(['request_expired','request_not_found','ad_not_completed'].includes(e.code))localStorage.removeItem(key);throw e;}
 }
-export async function factoryAd(purpose,details={}){
+export async function factoryAd(purpose,details={},options={}){
  await recoverFactoryAd();const r=await factoryCall('ads/reserve',{purpose,...details}),key=await journalKey();let proof;
  try{
  localStorage.setItem(key,JSON.stringify(r));
@@ -17,6 +17,7 @@ export async function factoryAd(purpose,details={}){
  const showAd=['sell','tree-sale','produce'].includes(purpose)?showNativeInterstitial:showNativeRewarded;
  proof={requestId:r.requestId,...await showAd({adGroupId:r.adGroupId})};
  localStorage.setItem(key,JSON.stringify({...r,proof}));
+ options.onAdFinished?.();
  const result=await factoryCall('ads/complete',proof);localStorage.removeItem(key);return result;
  }catch(e){if(!proof){try{await factoryCall('ads/cancel',{requestId:r.requestId});localStorage.removeItem(key);}catch{/* Recover by expiration. */}}throw e;}
 }
