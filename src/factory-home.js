@@ -14,8 +14,8 @@ const $=s=>document.querySelector(s),urlPreview=new URLSearchParams(location.sea
 const preview=urlPreview;
 const saleSelection=new Set();
 let snapshot,active='tree',busy=false,filter=0,selling=false,toastTimer,animationTimer,stopFactoryScene=()=>{};
-let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),treeSold:false,productionReady:true,treeSaleReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
-function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10,treeSold:false,treeSalePending:false});}
+let previewState={version:3,date:kstDate(),used:0,overtime:false,limit:10,items:[],collection:[],balance:0,revision:0,pot:defaultPosition('pot'),treeSaleCount:0,treeSold:false,productionReady:true,treeSaleReady:true,exchangeReady:true,payments:[],catalog:defaultFactoryCatalog.map(({id,value})=>({id,value}))};
+function rollover(){if(previewState.date!==kstDate())Object.assign(previewState,{date:kstDate(),used:0,overtime:false,limit:10,treeSaleCount:0,treeSold:false,treeSalePending:false});}
 async function load(){if(preview){rollover();snapshot=structuredClone(previewState);}else snapshot=await factoryCall('state');}
 function toast(text){$('.toast').textContent=text;$('.toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('.toast').hidden=true,4500);}
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;}
@@ -45,7 +45,7 @@ function showGuide(){
   guideCard('assets/factory/santa.webp','하루 10개씩 만들어요','장식을 모아 트리를 꾸며요.'),
   guideCard('assets/thumbnails/gift-burgundy.webp','하루 10개 더 만들어요','추가 장식도 모을 수 있어요.'),
   guideCard('assets/trees/tree-green.png','원하는 곳에 꾸며요','장식과 선물은 드래그해 옮겨요.'),
-  guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50P','도감 30종을 모아 트리를 완성해요.'),
+  guideCard('assets/thumbnails/star-gold.webp','트리 판매로 50P','완성한 트리는 하루 5회 판매해요.'),
   guideCard('assets/thumbnails/bell-brass.webp','벨을 포인트로 바꿔요','1벨은 토스포인트 1P예요.')
  );
  modal('트리 꾸미기 이용안내',c);$('dialog').classList.add('guide-dialog');
@@ -78,10 +78,10 @@ async function renderTree(){
 }
 function syncTreeSaleButton(){
  utilities.querySelector('.tree-sale-link')?.remove();
- if(snapshot.treeSalePending){utilities.append(button('트리 판매 결과 확인',()=>run(async()=>{snapshot=await factoryCall('recover',{});await renderTree();renderPage();toast(snapshot.treeSold?'트리 판매 완료 · 토스포인트 50P 지급':'지급 결과를 확인 중이에요. 잠시 후 다시 확인해 주세요.');}),'factory-button tree-sale-link'));return;}
- const available=snapshot?.collection.length===30&&!snapshot.treeSold;
+ const available=snapshot?.collection.length===30&&(snapshot.treeSalePending||!snapshot.treeSold);
  utilities.classList.toggle('has-tree-sale',!!available);
  if(!available)return;
+ if(snapshot.treeSalePending){utilities.append(button('트리 판매 결과 확인',()=>run(async()=>{snapshot=await factoryCall('recover',{});await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(payout?.state==='failed'?'포인트 지급 실패 · 다시 시도해 주세요.':payout?.state==='succeeded'&&!snapshot.treeSalePending?(payout.mode==='test'?'테스트 지급 확인 · 실제 포인트는 지급되지 않았어요.':'트리 판매 완료 · 토스포인트 50P 지급'):'지급 결과를 확인 중이에요. 잠시 후 다시 확인해 주세요.');}),'factory-button tree-sale-link'));return;}
  const ready=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  const claim=ready&&snapshot.treeSaleReady?adButton('트리 판매하기 · 50P',()=>openTreeSaleConfirmation(),'factory-button ad-action tree-sale-link'):button(!snapshot.treeSaleReady?'트리 판매 포인트 지급 준비 중':'장식 30개를 트리에 배치하면 판매할 수 있어요',()=>{},'factory-button tree-sale-link');
  claim.disabled=busy||!ready||!snapshot.treeSaleReady;
@@ -91,11 +91,11 @@ function openTreeSaleConfirmation(){
  const treeReady=new Set(snapshot.items.filter(i=>i.placed).map(i=>i.asset_id)).size===30;
  if(!treeReady||snapshot.treeSold||!snapshot.treeSaleReady)return;
  const confirm=node('div');
- const summary=node('p','','트리 판매로 50P · 하루 최대 5회\n배치한 장식은 사라져요.\n도감 기록은 유지돼요.');summary.style.whiteSpace='pre-line';confirm.append(summary);
+ const summary=node('p','','트리 판매로 50P · 하루 5회\n배치한 장식은 사라져요.\n도감 기록은 유지돼요.');summary.style.whiteSpace='pre-line';confirm.append(summary);
  confirm.append(adButton('트리 판매하고 50P 받기',()=>run(async()=>{
-  if(preview){if(!previewState.treeSold){previewState.treeSold=true;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
+  if(preview){if(!previewState.treeSold){previewState.treeSaleCount++;previewState.treeSold=previewState.treeSaleCount>=5;previewState.items=previewState.items.map(i=>i.placed?{...i,placed:0,sold_at:Date.now()}:i).filter(i=>!i.sold_at);}await load();}
   else{const ad=await factoryAd('tree-sale');snapshot=await factoryCall('claim',{adRequestId:ad.requestId});}
-  $('dialog').close();await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(preview?'미리보기 완료 · 실제 지급은 없어요.':payout?.mode==='test'&&payout?.state==='succeeded'?'테스트 지급 확인 · 실제 포인트는 지급되지 않았어요.':payout?.state==='succeeded'?'트리 판매 완료 · 토스포인트 50P 지급':payout?.state==='failed'?'포인트 지급 실패 · 트리는 그대로예요. 다시 시도해 주세요.':'지급 결과를 확인 중이에요. 트리는 확인 전까지 보관돼요.');
+  $('dialog').close();await renderTree();renderPage();const payout=snapshot.payments.find(p=>p.purpose==='tree-sale');toast(preview?'미리보기 완료 · 실제 지급은 없어요.':payout?.mode==='test'&&payout?.state==='succeeded'?'테스트 지급 확인 · 실제 포인트는 지급되지 않았어요.':payout?.state==='succeeded'&&!snapshot.treeSalePending?'트리 판매 완료 · 토스포인트 50P 지급':payout?.state==='failed'?'포인트 지급 실패 · 트리는 그대로예요. 다시 시도해 주세요.':'지급 결과를 확인 중이에요. 트리는 확인 전까지 보관돼요.');
  })),button('취소',()=>$('dialog').close()));
  modal('트리 판매',confirm);
 }

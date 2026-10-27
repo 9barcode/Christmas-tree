@@ -86,7 +86,7 @@ test('exchange holds only server balance, retries do not debit twice, failed and
  }finally{sql.close();}
 });
 
-test('tree sale pays fixed 50P at most once per KST day, can sell again tomorrow, and never adds bells',async()=>{
+test('tree sale pays 50P up to five times per KST day, blocks pending/replays and never adds bells',async()=>{
  const {sql,env,send}=await setup();try{
  env.TOSS_PROMOTION_CODE_TREE_SALE='TREE_SALE_CODE';env.TOSS_PROMOTION_CODE_EXCHANGE='ORNAMENT_EXCHANGE_CODE';env.TOSS_PROMOTION_MODE='live';env.TOSS_MTLS={};
  for(const a of catalog)sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
@@ -100,14 +100,22 @@ test('tree sale pays fixed 50P at most once per KST day, can sell again tomorrow
  const payment=sql.prepare("SELECT amount,promotion_code,purpose,state,business_date FROM tree_factory_payments WHERE user_id='user'").get();assert.equal(payment.amount,50);assert.equal(payment.promotion_code,'TREE_SALE_CODE');assert.equal(payment.purpose,'tree-sale');assert.equal(payment.business_date,kstDate());
  assert.equal(result.balance,0);assert.equal(result.treeSold,false);assert.equal(result.treeSalePending,true);assert.equal(result.items.length,30);
  const state=await send('state');assert.equal((await send('layout',{revision:state.revision,pot:state.pot,items:[]})).error,'payment_in_progress');
- sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();const recovered=await send('recover',{});assert.equal(recovered.treeSold,true);assert.equal(recovered.treeSalePending,false);assert.equal(recovered.balance,0);assert.equal(recovered.items.length,0);
+ assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'payment_in_progress');
+ sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();const recovered=await send('recover',{});assert.equal(recovered.treeSold,false);assert.equal(recovered.treeSaleCount,1);assert.equal(recovered.treeSalePending,false);assert.equal(recovered.balance,0);assert.equal(recovered.items.length,0);
+ for(let i=2;i<=5;i++){
+  addPlacedTree('sale'+i+':');assert.equal((await completeSale()).status,200);
+  sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();
+  const done=await send('recover',{});assert.equal(done.treeSaleCount,i);assert.equal(done.treeSold,i===5);assert.equal(done.items.length,0);
+ }
+ assert.equal(sql.prepare("SELECT sum(amount) AS n FROM tree_factory_payments WHERE purpose='tree-sale'").get().n,250);
  assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_ledger WHERE kind='tree_sale'").get().n,0);
  assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'tree_sale_daily_limit');
  sql.prepare("UPDATE tree_factory_payments SET business_date='2000-01-01' WHERE purpose='tree-sale'").run();assert.equal((await send('state')).treeSold,false);
  addPlacedTree('tomorrow:');const next=await completeSale();assert.equal(next.status,200,JSON.stringify(next));
- assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_payments WHERE purpose='tree-sale'").get().n,2);
+ assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_payments WHERE purpose='tree-sale'").get().n,6);
  sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale' AND business_date=?").run(kstDate());await send('recover',{});
- assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'tree_sale_daily_limit');
+ assert.equal((await send('state')).treeSaleCount,1);
+ assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'tree_not_ready');
  assert.equal((await send('state')).balance,0);
  }finally{sql.close();}
 });

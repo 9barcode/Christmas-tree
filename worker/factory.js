@@ -42,7 +42,7 @@ async function view(env,user){
  const treeSalePayment=await q(env,"SELECT state,finalized_at FROM tree_factory_payments WHERE user_id=? AND purpose='tree-sale' AND (state IN ('creating','ready','submitted','pending') OR (state='succeeded' AND finalized_at IS NULL)) ORDER BY created_at DESC LIMIT 1",user.id).first();
  const treeSold=treeSaleCount>=5;
  const treeSalePending=!!treeSalePayment;
- return {version:3,date,used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold,treeSalePending,treeSaleCount,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,treeSaleReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_TREE_SALE&&!!publicAdConfig(env).interstitialAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
+ return {version:3,date,used,overtime,limit:overtime?20:10,items:items.results,collection:col.results.map(r=>r.asset_id),balance:balance.n,revision:layout.revision,pot:JSON.parse(layout.pot_json),treeSold,treeSalePending,treeSaleCount,treeSaleDailyLimit:5,catalog:catalog.map(a=>({id:a.id,value:rows?.find(r=>r.id===a.id)?.value??null})),productionReady:!!rows&&!!publicAdConfig(env).interstitialAdGroupId,treeSaleReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_TREE_SALE&&!!publicAdConfig(env).interstitialAdGroupId,exchangeReady:!!env.TOSS_MTLS&&!!env.TOSS_PROMOTION_CODE_EXCHANGE&&!!publicAdConfig(env).rewardedAdGroupId,payments:payments.results};
 }
 function saleIds(body){
  const ids=body.itemIds===undefined?[body.itemId]:body.itemIds;

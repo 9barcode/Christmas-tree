@@ -14,7 +14,7 @@ test('every tab help entry point opens the same current guide',()=>{
  assert.match(source,/장식을 모아 트리를 꾸며요/);
  assert.match(source,/추가 장식도 모을 수 있어요/);
  assert.doesNotMatch(source,/guideCard\([^\n]*광고/);
- assert.match(source,/도감 30종을 모아 트리를 완성해요/);
+ assert.match(source,/완성한 트리는 하루 5회 판매해요/);
  assert.match(source,/guideCard\('assets\/thumbnails\/bell-brass\.webp'/);
  assert.doesNotMatch(source,/하루 한 번 출석/);
 });
