@@ -86,6 +86,23 @@ test('exchange holds only server balance, retries do not debit twice, failed and
  }finally{sql.close();}
 });
 
+test('successful payout without consumed ornaments blocks another 50P sale',async()=>{
+ const {sql,env,send}=await setup();
+ try{
+  env.TOSS_PROMOTION_CODE_TREE_SALE='TREE_SALE_CODE';env.TOSS_PROMOTION_MODE='test';env.TOSS_MTLS={};
+  for(const a of catalog){
+   sql.prepare('INSERT INTO tree_factory_collection VALUES(?,?,?)').run('user',a.id,Date.now());
+   sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,source,created_at) VALUES(?,?,?,1,1,?,?)').run('old:'+a.id,'user',a.id,'old:'+a.id,Date.now());
+  }
+  const id='old-paid-sale';
+  sql.prepare("INSERT INTO tree_factory_payments(id,user_id,mode,promotion_code,amount,state,created_at,updated_at,purpose,business_date,finalized_at) VALUES(?,?,?,?,50,'succeeded',?,?, 'tree-sale',?,?)")
+   .run(id,'user','test','TEST_CODE',Date.now(),Date.now(),kstDate(),Date.now());
+  const blocked=await send('ads/reserve',{purpose:'tree-sale'});
+  assert.equal(blocked.error,'tree_sale_reconciliation_required');
+  assert.equal((await send('state')).items.length,30);
+  assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_payments WHERE user_id='user'").get().n,1);
+ }finally{sql.close();}
+});
 test('tree sale pays 50P up to five times per KST day, blocks pending/replays and never adds bells',async()=>{
  const {sql,env,send}=await setup();try{
  env.TOSS_PROMOTION_CODE_TREE_SALE='TREE_SALE_CODE';env.TOSS_PROMOTION_CODE_EXCHANGE='ORNAMENT_EXCHANGE_CODE';env.TOSS_PROMOTION_MODE='live';env.TOSS_MTLS={};
