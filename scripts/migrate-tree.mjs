@@ -46,6 +46,10 @@ if(auditTables.some(r=>r.results?.length)){
 }
 
 
+// Aggregate-only diagnostics: no user IDs, session tokens, or provider keys.
+const saleInventory=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT p.state,p.mode,p.finalized_at IS NOT NULL AS finalized,count(*) AS payments,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NOT NULL)) AS consumed_items,sum((SELECT count(*) FROM tree_factory_items i WHERE i.tree_sale_payment_id=p.id AND i.sold_at IS NULL)) AS reserved_items FROM tree_factory_payments p WHERE p.purpose='tree-sale' GROUP BY p.state,p.mode,p.finalized_at IS NOT NULL"],true));
+console.log('Tree sale inventory audit:',JSON.stringify(saleInventory.flatMap(r=>r.results??[])));
+
 for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(*) AS requests FROM tree_analytics_events WHERE endpoint IN('/api/v3/ads/reserve','/api/v3/ads/complete','/api/v3/claim','/api/v3/recover') AND created_at > datetime('now','-2 hours') GROUP BY endpoint,status"],["Sale payout stages","SELECT state,error_code,count(*) AS payments FROM tree_factory_payments WHERE purpose='tree-sale' GROUP BY state,error_code"]]){
  const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
  console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
