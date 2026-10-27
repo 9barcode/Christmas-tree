@@ -40,7 +40,10 @@ export default {
       const policy = await env.DB.prepare("SELECT name FROM sqlite_master WHERE (type='trigger' AND name='tree_factory_tree_sale_daily_cap') OR (type='index' AND name='tree_factory_tree_sale_pending')").all();
       const ready = requiredTables.every(name => present.has(name)) && policy.results.length === 2;
       const treeSaleDailyLimit = ready ? 5 : null;
-      return Response.json({service: 'treemoa', database: ready ? 'ready' : 'migration_required', treeSaleDailyLimit},
+      const promotionMode=String(env.TOSS_PROMOTION_MODE||'live');
+      const promotionCode=String(env.TOSS_PROMOTION_CODE_TREE_SALE||'').trim();
+      const treeSalePromotionStatus=!env.TOSS_MTLS?'mtls_missing':!promotionCode?'code_missing':!['live','test'].includes(promotionMode)?'invalid_mode':promotionMode==='live'&&promotionCode.startsWith('TEST_')?'test_code_in_live_mode':'ready';
+      return Response.json({service: 'treemoa', database: ready ? 'ready' : 'migration_required', treeSaleDailyLimit,treeSalePromotionStatus},
         {status: ready ? 200 : 503, headers: {'Cache-Control': 'no-store'}});
     } catch (error) {
       console.error('treemoa database health check failed', error);
