@@ -38,3 +38,9 @@ if (renames.length) {
   }
 }
 wrangler(['d1', 'migrations', 'apply', 'podomoa-db', target]);
+// Report one-time grant outcomes without logging anonymous keys or full user IDs.
+const auditTables=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT name FROM sqlite_master WHERE name='tree_admin_decoration_grants'"],true));
+if(auditTables.some(r=>r.results?.length)){
+ const audit=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',"SELECT g.id AS grant_id,substr(g.user_id,-8) AS account_suffix,g.owned_before,g.inserted_count,g.completed_at,(SELECT count(DISTINCT asset_id) FROM tree_factory_items i WHERE i.user_id=g.user_id AND i.sold_at IS NULL) AS owned_types,(SELECT count(*) FROM tree_factory_collection c WHERE c.user_id=g.user_id) AS collection_types FROM tree_admin_decoration_grants g ORDER BY g.id"],true));
+ console.log('Decoration grant audit:',JSON.stringify(audit.flatMap(r=>r.results??[])));
+}

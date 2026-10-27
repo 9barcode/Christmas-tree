@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
 const dir=new URL('../migrations/tree/',import.meta.url);
 const grant=readFileSync(new URL('0011_owner_missing_decorations.sql',dir),'utf8');
+const secondGrant=readFileSync(new URL('0012_second_inventory_missing_decorations.sql',dir),'utf8');
 function setup(tie=false){
  const db=new DatabaseSync(':memory:');
  for(const f of readdirSync(dir).filter(f=>f.endsWith('.sql')&&f<'0011').sort())db.exec(readFileSync(new URL(f,dir),'utf8'));
@@ -30,4 +31,20 @@ test('ties and active payouts abort without granting to another account',()=>{
   assert.throws(()=>db.exec(grant),/NOT NULL/);
   assert.equal(db.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE source LIKE 'admin:%'").get().n,0);
  }finally{db.close();}}
+});
+test('second grant targets only the unique runner-up after the first grant',()=>{
+ const db=setup();try{
+  db.exec(grant);db.exec(secondGrant);
+  const audit=db.prepare("SELECT * FROM tree_admin_decoration_grants WHERE id='owner-second-fill-20261027'").get();
+  assert.equal(audit.user_id,'b');assert.equal(audit.owned_before,1);assert.equal(audit.inserted_count,29);
+  assert.equal(db.prepare("SELECT count(DISTINCT asset_id) AS n FROM tree_factory_items WHERE user_id='b'").get().n,30);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id='c'").get().n,0);
+  db.exec(secondGrant);assert.equal(db.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id='b'").get().n,30);
+ }finally{db.close();}
+});
+test('a tie for second place aborts the second grant',()=>{
+ const db=setup();try{
+  db.exec("INSERT INTO tree_factory_items(id,user_id,asset_id,value,source,created_at) VALUES('c1','c','bow-red',1,'c1',1)");
+  assert.throws(()=>db.exec(secondGrant),/NOT NULL/);
+ }finally{db.close();}
 });
