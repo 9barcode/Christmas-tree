@@ -125,5 +125,6 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .home>.tab-sign{top:2%;left:16%;width:68%;font-size:6cqw;padding:2cqw 1cqw}
 .home .tree-status{top:12%}
 body[data-page=inventory] .factory-shell,body[data-page=collection] .factory-shell{padding-top:96px}
-body[data-page=factory] .tab-sign{top:12px}
+/* Factory sign must clear the quota artwork without shifting/cropping/repainting the background. */
+body[data-page=factory] .tab-sign{top:4px;padding:5px 4px;font-size:clamp(20px,5.3vw,27px);line-height:1.1}
 
