@@ -102,3 +102,12 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 
 .garden .ornament.draggable:before{content:'';position:absolute;inset:-35%;background:transparent;pointer-events:auto}
 .tree-remove-action{min-width:76px;min-height:42px;padding:8px 12px;font-size:13px;touch-action:manipulation}
+
+
+/* Tree sale payout status reuses the app's warm parchment, green buttons and painted ornament. */
+.tree-sale-result-dialog .tree-sale-result{text-align:center;padding:4px 6px 8px;color:#57351f}
+.tree-sale-result-art{display:block!important;width:112px;height:112px;max-height:112px!important;object-fit:contain;margin:0 auto 12px;filter:drop-shadow(0 4px 5px #59351c44)}
+.tree-sale-result-message{margin:0 auto 12px;max-width:290px;font-size:19px;line-height:1.5;word-break:keep-all}
+.tree-sale-result-detail{margin:0 auto 12px;max-width:300px;color:#835b39;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.tree-sale-result-dialog .factory-button{display:block;max-width:320px;margin:10px auto 0}
+.tree-sale-result-dialog .tree-sale-result-close{background:linear-gradient(#fff2ce,#e6c38e);border-color:#b9905d;color:#623d24}
