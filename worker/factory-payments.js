@@ -29,7 +29,19 @@ async function finalize(env,user,payment) {
         .bind(user.id,payment.id).run();
       return;
     }
-    if (payment.finalized_at !== null && payment.finalized_at !== undefined) return;
+    if (payment.finalized_at !== null && payment.finalized_at !== undefined) {
+      // Repair only ornaments explicitly tied to this payout. Historical untagged
+      // ornaments cannot be safely inferred from a completed payment.
+      const remaining=await env.DB.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL")
+        .bind(user.id,payment.id).first();
+      if (remaining.n) {
+        await env.DB.prepare("UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL")
+          .bind(Date.now(),user.id,payment.id).run();
+        await env.DB.prepare("UPDATE tree_factory_layout SET revision=revision+1 WHERE user_id=?").bind(user.id).run();
+        console.warn('[tree.sale.finalize]',{event:'repaired_bound_ornaments',count:remaining.n});
+      }
+      return;
+    }
     // Older unsettled sales did not tag their ornaments at reservation time.
     // Tag only the 30 currently placed ornaments when nothing is already reserved.
     const reserved=await env.DB.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id=? AND tree_sale_payment_id=? AND sold_at IS NULL")
