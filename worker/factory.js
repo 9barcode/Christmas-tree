@@ -193,7 +193,11 @@ export async function handleFactory(request,env){
  if(route==='ads/complete')return reply(await finish(env,user,body));
  if(route==='ads/cancel'){await q(env,"UPDATE tree_factory_requests SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();await q(env,"UPDATE tree_factory_ad_gates SET state='cancelled' WHERE id=? AND user_id=? AND state='reserved'",body.requestId||'',user.id).run();}
  if(route==='sell')await sell(env,user,body);
- if(route==='claim')await sellTree(env,user,body);
+ if(route==='claim'){
+ console.info('[tree.sale]',{event:'claim_start'});
+ await sellTree(env,user,body);
+ console.info('[tree.sale]',{event:'claim_processed'});
+ }
  if(route==='layout')await place(env,user,body);
  if(route==='exchange')await exchange(env,user,body);
  if(route==='recover'){
