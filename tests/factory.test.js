@@ -97,11 +97,16 @@ test('tree sale pays 50P up to five times per KST day, blocks pending/replays an
  }
  function addPlacedTree(prefix){for(const a of catalog)sql.prepare('INSERT INTO tree_factory_items(id,user_id,asset_id,value,placed,x,y,source,created_at) VALUES(?,?,?,1,1,50,50,?,?)').run(prefix+a.id,'user',a.id,'seed:'+prefix+a.id,Date.now());}
  addPlacedTree('item:');const result=await completeSale();assert.equal(result.status,200,JSON.stringify(result));
+ const reserved=sql.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id='user' AND tree_sale_payment_id IS NOT NULL").get();
+ assert.equal(reserved.n,30,'exactly the sold ornaments must be bound to the payment');
  const payment=sql.prepare("SELECT amount,promotion_code,purpose,state,business_date FROM tree_factory_payments WHERE user_id='user'").get();assert.equal(payment.amount,50);assert.equal(payment.promotion_code,'TREE_SALE_CODE');assert.equal(payment.purpose,'tree-sale');assert.equal(payment.business_date,kstDate());
  assert.equal(result.balance,0);assert.equal(result.treeSold,false);assert.equal(result.treeSalePending,true);assert.equal(result.items.length,30);
  const state=await send('state');assert.equal((await send('layout',{revision:state.revision,pot:state.pot,items:[]})).error,'payment_in_progress');
  assert.equal((await send('ads/reserve',{purpose:'tree-sale'})).error,'payment_in_progress');
  sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();const recovered=await send('recover',{});assert.equal(recovered.treeSold,false);assert.equal(recovered.treeSaleCount,1);assert.equal(recovered.treeSalePending,false);assert.equal(recovered.balance,0);assert.equal(recovered.items.length,0);
+ assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_items WHERE user_id='user' AND tree_sale_payment_id IS NOT NULL AND sold_at IS NOT NULL").get().n,30);
+ assert.equal(sql.prepare("SELECT count(*) AS n FROM tree_factory_collection WHERE user_id='user'").get().n,30);
+ assert.equal(sql.prepare("SELECT finalized_at IS NOT NULL AS done FROM tree_factory_payments WHERE purpose='tree-sale'").get().done,1);
  for(let i=2;i<=5;i++){
   addPlacedTree('sale'+i+':');assert.equal((await completeSale()).status,200);
   sql.prepare("UPDATE tree_factory_payments SET state='succeeded' WHERE purpose='tree-sale'").run();
