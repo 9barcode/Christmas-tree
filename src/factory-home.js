@@ -26,7 +26,7 @@ function modal(title,content){if($('dialog').open)$('dialog').close();$('dialog'
 function setBusy(value){busy=value;$('.home').setAttribute('aria-busy',String(value));$('.factory-shell').setAttribute('aria-busy',String(value));for(const root of document.body.children)if(!root.matches('.toast'))root.inert=value;}
 async function run(action){if(busy)return;setBusy(true);try{await action();}catch(e){toast(e.message||'연결을 확인해 주세요.');try{await load();await render();}catch{/* Preserve confirmed snapshot. */}}finally{setBusy(false);syncTreeSaleButton();renderPage();}}
 function setPage(page){if(busy)return;active=page;filter=0;selling=false;$('.home').hidden=page!=='tree';utilities.hidden=page!=='tree';$('.factory-shell').hidden=page==='tree';document.querySelectorAll('.page-tabs button').forEach(b=>{b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});document.body.dataset.page=page;clearTimeout(animationTimer);syncTreeSaleButton();renderPage();}
-const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');const viewport=node('div','factory-viewport');const tabSign=node('h1','tab-sign');tabSign.hidden=true;const sceneViewport=node('div','factory-art-viewport');sceneViewport.append(shell);viewport.append(tabSign,sceneViewport);document.body.append(viewport);
+const shell=node('section','factory-shell');shell.hidden=true;shell.setAttribute('aria-label','장식 공장과 보관함');const viewport=node('div','factory-viewport');const tabSign=node('h1','tab-sign');tabSign.hidden=true;const sceneViewport=node('div','factory-art-viewport');sceneViewport.append(shell);viewport.append(sceneViewport,tabSign);document.body.append(viewport);
 const tabs=node('nav','page-tabs');tabs.setAttribute('aria-label','주 메뉴');
 for(const [page,label,icon] of [['tree','트리 꾸미기','tree'],['factory','장식 공장','factory'],['inventory','보관함','box'],['collection','도감','book']]){const b=button('',()=>setPage(page),'page-tab');b.dataset.page=page;b.innerHTML=`<svg viewBox="0 0 32 32" aria-hidden="true"><use href="assets/ui/factory-icons.svg#${icon}"/></svg><span></span>`;b.querySelector('span').textContent=label;tabs.append(b);}document.body.append(tabs);
 const share=button('사진 저장 · 공유',showShare,'photo-link');$('.home-links').append(share);
@@ -184,12 +184,9 @@ function placePageBanner(){
 function renderPage(){
  document.querySelector('.sale-actions')?.remove();stopFactoryScene();stopFactoryScene=()=>{};shell.classList.toggle('concept-factory',active==='factory');
  if(!snapshot)return;tabs.querySelectorAll('button').forEach(b=>b.disabled=busy);
- tabSign.hidden=active==='tree';
+ tabSign.hidden=false;tabSign.textContent=({tree:'트리 꾸미기',factory:'장식 공장',inventory:'보관함',collection:'장식 도감'})[active];tabSign.setAttribute('aria-label',tabSign.textContent);
  if(active==='tree'){placePageBanner();return;}
  const titles={factory:'장식 공장',inventory:'보관함',collection:'장식 도감'};
- tabSign.setAttribute('aria-label',titles[active]);tabSign.classList.toggle('painted-factory-sign',active==='factory');
- if(active==='factory')tabSign.innerHTML='<svg viewBox="124 12 260 72" aria-hidden="true"><image href="assets/factory/concept-original.webp" width="512" height="1024"/></svg>';
- else tabSign.textContent=titles[active];
  shell.setAttribute('aria-label',titles[active]);shell.replaceChildren();
  if(active==='factory'){renderFactory();placePageBanner();return;}
  const content=node('div','factory-content');shell.append(content);
