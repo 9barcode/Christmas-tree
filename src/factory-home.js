@@ -25,7 +25,7 @@ function adWaitingButton(text,fn,cls='factory-button',withIcon=false){
  const b=button('',null,cls),label=document.createTextNode(text);
  if(withIcon){const icon=node('span','ad-icon');icon.setAttribute('aria-hidden','true');icon.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>광고</span>';b.append(icon);}
  b.append(label);
- b.onclick=async()=>{if(b.dataset.adWaiting==='true')return;b.dataset.adWaiting='true';label.textContent='광고 대기 중…';try{await fn();}finally{label.textContent=text;delete b.dataset.adWaiting;}};
+ b.onclick=async()=>{if(b.dataset.adWaiting==='true')return;b.dataset.adWaiting='true';label.textContent='광고 대기 중…';const painted=b.closest('.concept-factory')!==null;if(painted)b.style.setProperty('color','#fff8e6','important');try{await fn();}finally{label.textContent=text;if(painted)b.style.removeProperty('color');delete b.dataset.adWaiting;}};
  return b;
 }
 function adButton(text,fn,cls='factory-button ad-action'){return adWaitingButton(text,fn,cls,true);}
