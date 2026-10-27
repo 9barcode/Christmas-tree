@@ -116,7 +116,8 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
    while shifting the entire scene and its interaction layers together. */
 .factory-viewport{width:min(100%,540px);margin:0 auto;overflow:hidden;display:flow-root;container-type:inline-size}
 .factory-art-viewport{overflow:hidden;display:flow-root;container-type:inline-size}
-.factory-art-viewport>.concept-factory{margin-top:-18.75cqw}
+/* Reveal more of the SAME source artwork so the quota board sits below the overlay sign. */
+.factory-art-viewport>.concept-factory{margin-top:-11.75cqw}
 .home .tree-status{position:absolute;top:2.5%;left:16%;width:68%;text-align:center;z-index:5}
 
 /* Each sign hangs over its own tab's existing background; never crop or replace scenery. */
@@ -126,5 +127,5 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 .home .tree-status{top:12%}
 body[data-page=inventory] .factory-shell,body[data-page=collection] .factory-shell{padding-top:96px}
 /* Factory sign must clear the quota artwork without shifting/cropping/repainting the background. */
-body[data-page=factory] .tab-sign{top:4px;padding:5px 4px;font-size:clamp(20px,5.3vw,27px);line-height:1.1}
+body[data-page=factory] .tab-sign{top:12px}
 
