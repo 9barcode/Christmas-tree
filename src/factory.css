@@ -115,5 +115,11 @@ body[data-page=factory] .page-tabs{background:#20392c;border:1px solid #587057;b
 /* Toss owns top navigation. Crop the navigation painted into the factory art,
    while shifting the entire scene and its interaction layers together. */
 .factory-viewport{width:min(100%,540px);margin:0 auto;overflow:hidden;display:flow-root;container-type:inline-size}
-.factory-viewport>.concept-factory{margin-top:-18.75cqw}
+.factory-art-viewport{overflow:hidden;display:flow-root;container-type:inline-size}
+.factory-art-viewport>.concept-factory{margin-top:-18.75cqw}
 .home .tree-status{position:absolute;top:2.5%;left:16%;width:68%;text-align:center;z-index:5}
+
+/* Content signboards only; navigation belongs to Toss. */
+.tab-sign{position:relative;z-index:1;width:68%;margin:12px auto 16px;padding:13px 2px;box-sizing:border-box;text-align:center;font-size:clamp(23px,7vw,34px);font-weight:400;color:#fff3d8;background:linear-gradient(#8f4c1b,#683417);border:1px solid #bd773c;border-radius:16px;box-shadow:inset 0 2px 0 #e5a24955,0 4px 8px #23120b88}
+.tab-sign.painted-factory-sign{width:56%;padding:0;background:none;border:0;box-shadow:none}
+.tab-sign svg{display:block;width:100%;height:auto;aspect-ratio:260/72;overflow:hidden}
