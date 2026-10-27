@@ -1,0 +1,57 @@
+name: Convert assets losslessly
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/convert-assets-lossless.py'
+      - '.github/workflows/optimize-assets.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: tree-lossless-assets
+  cancel-in-progress: false
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: python -m pip install Pillow==12.3.0
+      - name: Convert and compare all RGBA pixels
+        run: python scripts/convert-assets-lossless.py --apply
+      - run: npm ci
+      - name: Check asset references, placement and photo behavior
+        run: node --test tests/layout-performance.test.js tests/image-cache.test.js tests/photo-preparation.test.js tests/guide-consistency.test.js
+      - run: npm run build
+      - name: Commit verified replacements to main
+        id: commit
+        run: |
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Replace PNG assets with pixel-identical lossless WebP'
+          git push origin HEAD:main
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+      # GITHUB_TOKEN commits do not recursively trigger push workflows.
+      - name: Build updated AIT
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-ait.yml --ref main
+      - name: Deploy Worker with updated shared asset manifest
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-worker.yml --ref main
