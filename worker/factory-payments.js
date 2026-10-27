@@ -23,11 +23,11 @@ const read = (env,user,id) => env.DB.prepare('SELECT * FROM tree_factory_payment
 async function finalize(env,user,payment) {
   if (!payment || !['succeeded','failed'].includes(payment.state)) return;
   if (payment.purpose === 'tree-sale') {
-    // Test payouts are deliberately non-destructive; only confirmed live payouts consume the tree.
-    if (payment.state !== 'succeeded' || payment.mode === 'test') return;
+    // A confirmed test payout applies the same tree sale state without paying real points.
+    if (payment.state !== 'succeeded') return;
     const now = Date.now(),token=crypto.randomUUID();
     await env.DB.batch([
-      env.DB.prepare("UPDATE tree_factory_payments SET finalized_at=?,finalization_token=? WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='succeeded' AND mode='live' AND finalized_at IS NULL AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1)=30")
+      env.DB.prepare("UPDATE tree_factory_payments SET finalized_at=?,finalization_token=? WHERE id=? AND user_id=? AND purpose='tree-sale' AND state='succeeded' AND finalized_at IS NULL AND (SELECT count(DISTINCT asset_id) FROM tree_factory_items WHERE user_id=? AND sold_at IS NULL AND placed=1)=30")
         .bind(now,token,payment.id,user.id,user.id),
       env.DB.prepare('UPDATE tree_factory_items SET sold_at=?,placed=0 WHERE user_id=? AND sold_at IS NULL AND placed=1 AND EXISTS(SELECT 1 FROM tree_factory_payments WHERE id=? AND user_id=? AND finalization_token=?)')
         .bind(now,user.id,payment.id,user.id,token),
