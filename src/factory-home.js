@@ -1,3 +1,4 @@
+import assetBounds from './asset-bounds.js';
 import {startFactoryScene} from './factory-scene.js';
 import {createPhotoPreparation} from './photo-preparation.js';
 import {factoryCall,factoryAd,recoverFactoryAd} from './factory-client.js';
@@ -51,7 +52,7 @@ function showGuide(){
 }
 $('.guide-link').onclick=showGuide;
 $('.close').onclick=()=>$('dialog').close();$('dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
-const bounds=new Map();
+const bounds=new Map(Object.entries(assetBounds));
 async function assetNode(path,className){
  let g=bounds.get(path);if(!g){const img=new Image();img.src=path;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);const data=ctx.getImageData(0,0,c.width,c.height).data;let x0=c.width,y0=c.height,x1=0,y1=0;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(data[(y*c.width+x)*4+3]>16){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}g={box:`${x0} ${y0} ${x1-x0+1} ${y1-y0+1}`,w:c.width,h:c.height};bounds.set(path,g);}
  // Keep each decoration's silhouette proportional, as in inventory thumbnails.
@@ -213,9 +214,16 @@ function showItem(a,owned,fresh=false,chosenId=null){
  c.append(button('보관하기',()=>$('dialog').close()));
  const duplicatePlaced=!item.placed&&snapshot.items.some(i=>i.placed&&i.asset_id===item.asset_id);
  const placementButton=button(item.placed?'트리에서 회수하기':duplicatePlaced?'같은 장식은 이미 트리에 있어요':'트리에 배치하기',()=>run(async()=>{
+ const before=structuredClone(snapshot);
  const current=snapshot.items.find(i=>i.id===item.id);if(!current)throw Error('장식 상태를 다시 확인해 주세요.');
  if(!current.placed){if(snapshot.items.some(i=>i.placed&&i.asset_id===current.asset_id))throw Error('같은 장식은 트리에 하나만 놓을 수 있어요.');const placed=snapshot.items.filter(i=>i.placed);if(placed.length>=30)throw Error('트리에는 최대 30개를 배치할 수 있어요.');if(['lights','topper'].includes(a.kind)&&placed.some(i=>byId[i.asset_id].kind===a.kind))throw Error('별과 전구줄은 한 개씩만 배치할 수 있어요.');Object.assign(current,defaultPosition(a.kind,placed.filter(i=>byId[i.asset_id].kind===a.kind).length),{placed:1});}else current.placed=0;
- await saveLayout();await renderTree();$('dialog').close();setPageAfterAction('tree');
+ $('dialog').close();setPageAfterAction('tree');
+ try{
+  await renderTree();
+  // Let the optimistic scene paint before starting server persistence.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  await saveLayout();await renderTree();
+ }catch(error){snapshot=before;await renderTree();throw error;}
  }));
  placementButton.disabled=busy||duplicatePlaced;c.append(placementButton);
  if(item.value>0)c.append(button('판매하기',()=>{$('dialog').close();selling=true;filter=0;saleSelection.clear();setPageAfterAction('inventory');}));
@@ -262,9 +270,12 @@ function showShare(){
 
 const motion=pageEffects(async()=>{const fire=await startCozyFire($('.fire'),$('.room'));const snow=startCozySnow($('.snow'));return()=>{fire();snow();};},{onError:console.error});
 await load();await render();await motion.start();setPage('tree');startHomeBanner();
-let lastDate=snapshot.date;
-async function reconnect(){if(preview||busy||document.hidden)return;await run(async()=>{await recoverFactoryAd();snapshot=await factoryCall('recover',{});await render();lastDate=snapshot.date;});}
-window.addEventListener('tree:home-ready',reconnect);window.addEventListener('focus',reconnect);document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('factory-paused',document.hidden);if(!document.hidden)reconnect();});
+let lastDate=snapshot.date,lastRefreshAt=Date.now();
+async function reconnect(){if(preview||busy||document.hidden||(kstDate()===lastDate&&Date.now()-lastRefreshAt<10000))return;lastRefreshAt=Date.now();await run(async()=>{await recoverFactoryAd();snapshot=await factoryCall('recover',{});await render();lastDate=snapshot.date;});}
+window.addEventListener('tree:home-ready',()=>{
+ let pendingAd=false;try{pendingAd=Object.keys(localStorage).some(k=>k.startsWith('tree.factory.pending.'));}catch{/* Focus refresh can retry. */}
+ if(pendingAd||snapshot.payments.some(p=>!['succeeded','failed'].includes(p.state))){lastRefreshAt=0;reconnect();}
+});window.addEventListener('focus',reconnect);document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('factory-paused',document.hidden);if(!document.hidden)reconnect();});
 setInterval(()=>{if(!preview&&kstDate()!==lastDate)reconnect();},60000);
 // Let a short result timer settle on pagehide; rewards have already been committed.
 
