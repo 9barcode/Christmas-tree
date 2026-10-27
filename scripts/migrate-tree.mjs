@@ -53,3 +53,8 @@ if(resetAuditTable.some(r=>r.results?.length)){
   console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
  }
 }
+
+for(const [label,sql] of [["Recent sale requests","SELECT endpoint,status,count(*) AS requests FROM tree_analytics_events WHERE endpoint IN('/api/v3/ads/reserve','/api/v3/ads/complete','/api/v3/claim','/api/v3/recover') AND created_at > datetime('now','-2 hours') GROUP BY endpoint,status"],["Sale payout stages","SELECT state,error_code,count(*) AS payments FROM tree_factory_payments WHERE purpose='tree-sale' GROUP BY state,error_code"]]){
+ const rows=JSON.parse(wrangler(['d1','execute','podomoa-db',target,'--json','--command',sql],true));
+ console.log(label+':',JSON.stringify(rows.flatMap(r=>r.results??[])));
+}
